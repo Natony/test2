@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Ô nhập IP của ESP32 -->
+    <EditText
+        android:id="@+id/etIp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Nhập IP ESP32"
+        android:inputType="text"
+        android:focusableInTouchMode="true" />
+
+    <!-- Nút bắt đầu / dừng kết nối -->
+    <Button
+        android:id="@+id/btnStartStop"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Kết nối và Bắt đầu" />
+
+    <!-- Vùng chứa các hàng thanh ghi, mỗi hàng sẽ có: -->
+    <!-- 1 ô hiển thị giá trị đang đọc (TextView) -->
+    <!-- 1 ô nhập giá trị mới (EditText) -->
+    <!-- 1 nút xác nhận (Button) -->
+    <LinearLayout
+        android:id="@+id/registerValuesLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="16dp" />
+
+    <!-- TextView hiển thị kết quả hay trạng thái (ví dụ: "Chưa có dữ liệu") -->
+    <TextView
+        android:id="@+id/tvResult"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Chưa có dữ liệu"
+        android:layout_marginTop="16dp"/>
+</LinearLayout>
