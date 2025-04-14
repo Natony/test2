@@ -2,9 +2,7 @@ package com.example.test2
 
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Bundle
-import android.view.View // Thêm import này
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -17,101 +15,83 @@ import com.google.gson.reflect.TypeToken
 class ConfigActivity : ComponentActivity() {
 
     private lateinit var etPLCAddress: EditText
-    private lateinit var btnAdd: Button
+    private lateinit var etPLCPort: EditText
     private lateinit var btnSave: Button
-    private lateinit var btnGoToMain: Button
-    private lateinit var adapter: ConfigAdapter // Sửa thành ConfigAdapter
-    private lateinit var prefs: SharedPreferences
-    private var selectedItem: ConfigItem? = null
+    private lateinit var rvAddresses: RecyclerView
+    private lateinit var adapter: ConfigAdapter
+
+    private val prefsName = "AppPrefs"
+    private val addressesKey = "plc_addresses"
+    private val gson = Gson()
+    private var addressList = mutableListOf<ConfigItem>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_config)
-
-        prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
-        initViews()
-        setupRecyclerView()
-        loadSavedConfigs()
-    }
-
-    private fun initViews() {
         etPLCAddress = findViewById(R.id.etPLCAddress)
-        btnAdd = findViewById(R.id.btnAdd)
+        etPLCPort = findViewById(R.id.etPLCPort)
         btnSave = findViewById(R.id.btnSave)
-        btnGoToMain = findViewById(R.id.btnGoToMain)
+        rvAddresses = findViewById(R.id.rvAddresses)
 
-        btnAdd.setOnClickListener { resetForm() }
-        btnSave.setOnClickListener { saveConfig() }
-        btnGoToMain.setOnClickListener { goToMain() }
-    }
-
-    private fun setupRecyclerView() {
+        rvAddresses.layoutManager = LinearLayoutManager(this)
         adapter = ConfigAdapter(
-            onItemClick = { config ->
-                selectedItem = config
-                etPLCAddress.setText(config.ipAddress)
-                btnSave.visibility = View.VISIBLE // Đã có import View
+            onItemClick = { selected ->
+                // Lưu địa chỉ được chọn để MainActivity dùng
+                val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                prefs.edit().putString("modbus_ip", selected.ipAddress).apply()
+                prefs.edit().putInt("modbus_port", selected.port).apply()
+                startActivity(Intent(this, MainActivity::class.java))
+                finish()
             },
-            onDeleteClick = { config ->
-                deleteConfig(config)
+            onDeleteClick = { itemToDelete ->
+                addressList.remove(itemToDelete)
+                saveAddresses()
+                updateRecyclerView()
             }
         )
+        rvAddresses.adapter = adapter
 
-        findViewById<RecyclerView>(R.id.rvConfigs).apply {
-            layoutManager = LinearLayoutManager(this@ConfigActivity)
-            adapter = this@ConfigActivity.adapter // Gán đúng adapter
+        loadAddresses()
+        updateRecyclerView()
+
+        btnSave.setOnClickListener {
+            val ip = etPLCAddress.text.toString().trim()
+            val portStr = etPLCPort.text.toString().trim()
+            if (ip.isEmpty() || portStr.isEmpty()) {
+                Toast.makeText(this, "Vui lòng nhập đầy đủ thông tin", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val port = portStr.toIntOrNull()
+            if (port == null) {
+                Toast.makeText(this, "Cổng không hợp lệ", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            // Thêm địa chỉ mới
+            val newItem = ConfigItem(ip, port)
+            addressList.add(newItem)
+            saveAddresses()
+            updateRecyclerView()
+            etPLCAddress.text.clear()
+            etPLCPort.text.clear()
         }
     }
 
-    private fun saveConfig() {
-        val ip = etPLCAddress.text.toString().trim()
-        if (ip.isEmpty()) {
-            Toast.makeText(this, "Vui lòng nhập IP", Toast.LENGTH_SHORT).show()
-            return
+    private fun loadAddresses() {
+        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val json = prefs.getString(addressesKey, null)
+        if (json != null) {
+            val type = object : TypeToken<MutableList<ConfigItem>>() {}.type
+            addressList = gson.fromJson(json, type)
         }
-
-        val configs = getSavedConfigs().toMutableList()
-        selectedItem?.let {
-            configs.removeAll { item -> item.id == it.id }
-            configs.add(it.copy(ipAddress = ip))
-        } ?: run {
-            configs.add(ConfigItem(ipAddress = ip))
-        }
-
-        saveConfigs(configs)
-        loadSavedConfigs()
-        resetForm()
     }
 
-    private fun deleteConfig(config: ConfigItem) {
-        val configs = getSavedConfigs().toMutableList().apply {
-            removeAll { it.id == config.id }
-        }
-        saveConfigs(configs)
-        loadSavedConfigs()
+    private fun saveAddresses() {
+        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val json = gson.toJson(addressList)
+        prefs.edit().putString(addressesKey, json).apply()
     }
 
-    private fun getSavedConfigs(): List<ConfigItem> {
-        val json = prefs.getString("saved_configs", "[]")
-        return Gson().fromJson(json, object : TypeToken<List<ConfigItem>>() {}.type)
-    }
-
-    private fun saveConfigs(configs: List<ConfigItem>) {
-        prefs.edit().putString("saved_configs", Gson().toJson(configs)).apply()
-    }
-
-    private fun loadSavedConfigs() {
-        adapter.updateData(getSavedConfigs()) // Đảm bảo adapter có phương thức này
-    }
-
-    private fun resetForm() {
-        selectedItem = null
-        etPLCAddress.text.clear()
-        btnSave.visibility = View.GONE // Đã có import View
-    }
-
-    private fun goToMain() {
-        startActivity(Intent(this, MainActivity::class.java))
-        finish()
+    private fun updateRecyclerView() {
+        adapter.updateData(addressList)
     }
 }

@@ -17,15 +17,15 @@ class ModbusRegisterMap {
      */
     fun updateFromRegisters(regs: IntArray) {
         if (regs.size >= 22) {
-            pallet = regs[19]
-            load = regs[20]
-            unload = regs[21]
             power = regs[1] == 1
             lock = regs[2] == 1
             buzzer = regs[3] == 1
             position = regs[4] == 1
             mode = regs[5] == 1
             handling = regs[6] == 1
+            pallet = regs[19]
+            load = regs[20]
+            unload = regs[21]
         }
     }
 }

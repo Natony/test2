@@ -34,7 +34,6 @@ class ConfigAdapter(
 
     override fun getItemCount(): Int = items.size
 
-    // Thêm phương thức updateData
     fun updateData(newItems: List<ConfigItem>) {
         items.clear()
         items.addAll(newItems)
