@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.cardview)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -57,8 +58,12 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-//    implementation("com.android.tools.build:gradle:7.3.1")
+    //implementation("com.android.tools.build:gradle:7.3.1")
     implementation("com.ghgande:j2mod:2.7.0")
     // https://mvnrepository.com/artifact/net.wimpi/jamod
     implementation("net.wimpi:jamod:1.2")
+
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("com.google.code.gson:gson:2.8.9")
+    //implementation("androidx.cardview:cardview:1.0.0")
 }

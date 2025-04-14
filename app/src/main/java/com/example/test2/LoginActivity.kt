@@ -21,26 +21,26 @@ class LoginActivity : ComponentActivity() {
         val errorMessage = findViewById<TextView>(R.id.error_message)
         val eyeIcon = findViewById<ImageView>(R.id.eye_icon)
 
-        // 👁️ Toggle hiện/ẩn mật khẩu
+        // Toggle hiện/ẩn mật khẩu
         eyeIcon.setOnClickListener {
             isPasswordVisible = !isPasswordVisible
             if (isPasswordVisible) {
                 passwordEditText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-                eyeIcon.setImageResource(android.R.drawable.ic_menu_close_clear_cancel) // icon đóng
+                eyeIcon.setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
             } else {
                 passwordEditText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                eyeIcon.setImageResource(android.R.drawable.ic_menu_view) // icon con mắt
+                eyeIcon.setImageResource(android.R.drawable.ic_menu_view)
             }
             passwordEditText.setSelection(passwordEditText.text.length)
         }
 
-        // 👉 Nút đăng nhập
+        // Xử lý nút đăng nhập
         loginButton.setOnClickListener {
             val username = usernameEditText.text.toString().trim()
             val password = passwordEditText.text.toString().trim()
 
             if (username == "admin" && password == "password") {
-                val intent = Intent(this, MainActivity::class.java)
+                val intent = Intent(this, ConfigActivity::class.java)
                 startActivity(intent)
                 finish()
             } else {
