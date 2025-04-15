@@ -1,16 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mainContainer"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <!-- Panel bên trái: điều khiển thay đổi theo chế độ -->
+    <FrameLayout
+        android:id="@+id/leftPanel"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.75">
+        <!-- Sẽ dùng ViewFlipper hoặc hai layout riêng AutoLeft và ManualLeft để thay đổi theo chế độ -->
+        <LinearLayout
+            android:id="@+id/layoutAutoLeft"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="visible">
+            <!-- Các nút điều khiển Auto cho phần bên trái -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnPickPallets"
+                    android:layout_width="190dp"
+                    android:layout_height="100dp"
+                    android:adjustViewBounds="true"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_pallets_plus1" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnPickPallet"
+                    android:layout_width="190dp"
+                    android:layout_height="100dp"
+                    android:adjustViewBounds="true"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_pallet_plus1" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnStackA"
+                    android:layout_width="190dp"
+                    android:layout_height="100dp"
+                    android:adjustViewBounds="true"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_stack_pallets_a1" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/layoutManualLeft"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+            <!-- Các nút điều khiển Manual cho phần bên trái (ví dụ: nút di chuyển) -->
+            <ImageButton
+                android:id="@+id/btnManualForward"
+                android:layout_width="190dp"
+                android:layout_height="100dp"
+                android:adjustViewBounds="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_shuttle_forward_on" />
+            <ImageButton
+                android:id="@+id/btnManualReverse"
+                android:layout_width="190dp"
+                android:layout_height="100dp"
+                android:adjustViewBounds="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_shuttle_reverse_on" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Panel giữa: hiển thị vị trí Shuttle, giữ cố định khi chuyển chế độ -->
 
     <LinearLayout
-        android:id="@+id/mainLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:id="@+id/centerPanel"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="16dp">
-
+        android:gravity="center">
+        <!-- Hiển thị vị trí của Shuttle (đọc từ PLC) -->
         <!-- Header: Title -->
         <TextView
             android:id="@+id/tvTitle"
@@ -55,172 +152,93 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Kết nối" />
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Trạng thái: Chưa kết nối"
+                android:textColor="#000000"
+                android:padding="4dp" />
         </LinearLayout>
-
         <TextView
-            android:id="@+id/tvStatus"
+            android:id="@+id/tvShuttlePosition"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Vị trí Shuttle: ?"
+            android:textSize="18sp"
+            android:textStyle="bold"/>
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Trạng thái: Chưa kết nối"
-            android:textColor="#000000"
-            android:padding="4dp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="8dp">
 
-        <!-- Các nút lệnh boolean -->
+            <ImageButton
+                android:id="@+id/btnPower"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:adjustViewBounds="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_power_off" />
+
+            <ImageButton
+                android:id="@+id/btnPosition"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:adjustViewBounds="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_position_a" />
+
+            <ImageButton
+                android:id="@+id/btnLock"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:adjustViewBounds="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_lock_open" />
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:padding="8dp">
-
-            <!-- Nguồn -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal">
-                <ImageButton
-                    android:id="@+id/btnPower"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_power_off"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Nguồn" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Nguồn" />
-            </LinearLayout>
-
-            <!-- Khóa -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal">
-                <ImageButton
-                    android:id="@+id/btnLock"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_lock_open"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Khóa" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Khóa" />
-            </LinearLayout>
-
-            <!-- Buzzer -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal">
-                <ImageButton
-                    android:id="@+id/btnBuzzer"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_buzzer_off"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Buzzer" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Buzzer" />
-            </LinearLayout>
+            <ImageButton
+                android:id="@+id/btnBuzzer"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_buzzer_off"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter" />
+            <ImageButton
+                android:id="@+id/btnHandlingMode"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_fifo"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter" />
         </LinearLayout>
-
-        <!-- Hàng thứ hai: Vị trí, Chế độ, Xử lý -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:padding="8dp">
-
-            <!-- Vị trí (A/B) -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal">
-                <ImageButton
-                    android:id="@+id/btnPosition"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_position_a"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Vị trí" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Vị trí" />
-            </LinearLayout>
-
-            <!-- Chế độ (Auto/Manual) -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal">
-                <ImageButton
-                    android:id="@+id/btnMode"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_mode_auto"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Chế độ" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Chế độ" />
-            </LinearLayout>
-
-            <!-- Xử lý (FIFO/LIFO) -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal">
-                <ImageButton
-                    android:id="@+id/btnHandlingMode"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_fifo"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Xử lý" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Xử lý" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Hàng dừng khẩn cấp (icon) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:padding="8dp">
+            <ImageButton
+                android:id="@+id/btnMode"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_mode_auto"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter" />
             <ImageButton
                 android:id="@+id/btnEmergencyStop"
                 android:layout_width="64dp"
@@ -228,168 +246,109 @@
                 android:src="@drawable/ic_emergency_stop"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:adjustViewBounds="true"
-                android:scaleType="fitCenter"
-                android:contentDescription="Dừng khẩn cấp" />
+                android:scaleType="fitCenter"/>
+            <ImageButton
+                android:id="@+id/btnCountPallet"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_count_pallet_on"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"/>
         </LinearLayout>
-
-        <!-- Hàng đếm Pallet -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="8dp"
-            android:gravity="center_horizontal">
-            <TextView
-                android:id="@+id/tvPalletCountLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Số Pallet:" />
-            <TextView
-                android:id="@+id/tvPalletCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0"
-                android:textSize="24sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- Phần điều khiển Load / Unload -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="8dp">
-
-            <!-- Load -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:padding="4dp"
-                android:gravity="center_horizontal">
-                <TextView
-                    android:id="@+id/tvLoadLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Load" />
-                <TextView
-                    android:id="@+id/tvLoadCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textSize="20sp" />
-                <EditText
-                    android:id="@+id/etLoadInput"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:hint="Nhập số"
-                    android:inputType="number" />
-                <Button
-                    android:id="@+id/btnLoadConfirm"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Xác nhận" />
-            </LinearLayout>
-
-            <!-- Unload -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:padding="4dp"
-                android:gravity="center_horizontal">
-                <TextView
-                    android:id="@+id/tvUnloadLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Unload" />
-                <TextView
-                    android:id="@+id/tvUnloadCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textSize="20sp" />
-                <EditText
-                    android:id="@+id/etUnloadInput"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:hint="Nhập số"
-                    android:inputType="number" />
-                <Button
-                    android:id="@+id/btnUnloadConfirm"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Xác nhận" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Điều khiển Manual: Bảng 3x3 -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Điều khiển Manual"
-            android:textAlignment="center"
-            android:textStyle="bold"
-            android:paddingTop="8dp" />
-
-        <GridLayout
-            android:id="@+id/gridManualControl"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:alignmentMode="alignMargins"
-            android:columnCount="3"
-            android:rowCount="3"
-            android:rowOrderPreserved="false"
-            android:padding="8dp">
-            <!-- Hàng 1: Rỗng, Up, Rỗng -->
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_column="0" />
-            <Button
-                android:id="@+id/btnManualUp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Up" />
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_column="2" />
-
-            <!-- Hàng 2: Left, Stop, Right -->
-            <Button
-                android:id="@+id/btnManualLeft"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Left" />
-            <Button
-                android:id="@+id/btnManualStop"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Stop" />
-            <Button
-                android:id="@+id/btnManualRight"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Right" />
-
-            <!-- Hàng 3: Rỗng, Down, Rỗng -->
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_column="0" />
-            <Button
-                android:id="@+id/btnManualDown"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Down" />
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_column="2" />
-        </GridLayout>
-
     </LinearLayout>
-</ScrollView>
+
+    <!-- Panel bên phải: điều khiển thay đổi theo chế độ -->
+    <FrameLayout
+        android:id="@+id/rightPanel"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.75">
+        <!-- Sử dụng ViewFlipper hoặc 2 layout riêng AutoRight và ManualRight -->
+        <LinearLayout
+            android:id="@+id/layoutAutoRight"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="visible">
+            <!-- Các nút điều khiển Auto cho phần bên phải -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnTakePallets"
+                    android:layout_width="190dp"
+                    android:layout_height="100dp"
+                    android:adjustViewBounds="true"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_pallets_minus1" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnTakePallet"
+                    android:layout_width="190dp"
+                    android:layout_height="100dp"
+                    android:adjustViewBounds="true"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_pallet_minus1" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnStackB"
+                    android:layout_width="190dp"
+                    android:layout_height="100dp"
+                    android:adjustViewBounds="true"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_stack_pallets_b1" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/layoutManualRight"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+            <!-- Các nút điều khiển Manual cho phần bên phải -->
+            <ImageButton
+                android:id="@+id/btnManualUp"
+                android:layout_width="190dp"
+                android:layout_height="100dp"
+                android:adjustViewBounds="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_shuttle_up_on" />
+            <ImageButton
+                android:id="@+id/btnManualDown"
+                android:layout_width="190dp"
+                android:layout_height="100dp"
+                android:adjustViewBounds="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_shuttle_down_on" />
+        </LinearLayout>
+    </FrameLayout>
+
+</LinearLayout>
