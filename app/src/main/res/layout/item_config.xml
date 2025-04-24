@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -6,20 +5,18 @@
     android:orientation="horizontal"
     android:padding="8dp">
 
-    <!-- Hiển thị địa chỉ, ví dụ: "192.168.1.12:502" -->
     <TextView
-        android:id="@+id/tvAddress"
+        android:id="@+id/tvDeviceName"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="IP:Port"
+        android:text="Device Name"
         android:textSize="16sp" />
 
-    <!-- Nút xóa item -->
     <ImageButton
-        android:id="@+id/btnDelete"
+        android:id="@+id/btnMenu"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@android:drawable/ic_delete"
-        android:contentDescription="Xóa địa chỉ" />
+        android:src="@android:drawable/ic_menu_more"
+        android:contentDescription="Menu" />
 </LinearLayout>

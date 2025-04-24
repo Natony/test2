@@ -1,125 +1,163 @@
 package com.example.test2
 
 import android.content.Context
-import android.graphics.drawable.Icon
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
 import kotlinx.coroutines.*
-import net.wimpi.modbus.io.ModbusTCPTransaction
-import net.wimpi.modbus.msg.ReadMultipleRegistersRequest
 import net.wimpi.modbus.msg.ReadMultipleRegistersResponse
-import net.wimpi.modbus.msg.WriteSingleRegisterRequest
-import net.wimpi.modbus.net.TCPMasterConnection
-import net.wimpi.modbus.procimg.SimpleRegister
-import java.net.InetAddress
-import java.net.Socket
 
 class MainActivity : ComponentActivity() {
 
-    // --- Views cấu hình ---
-    private lateinit var tvPLCAddress: TextView   // Hiển thị địa chỉ PLC đã config
-    private lateinit var etIp: EditText            // Hiển thị địa chỉ (disabled)
+    // Region: View declarations
+    private lateinit var tvNameDevice: TextView
+    private var deviceName: String = "PLC"
+    private lateinit var tvPLCAddress: TextView
+    private lateinit var etIp: EditText
     private lateinit var btnConnectDisconnect: Button
     private lateinit var tvStatus: TextView
+    private lateinit var tvShuttlePosition: TextView
 
-    // --- Các nút điều khiển ở panel giữa ---
+    private lateinit var btnBack: ImageButton
+
+    // Center panel buttons
     private lateinit var btnPower: ImageButton
     private lateinit var btnLock: ImageButton
     private lateinit var btnBuzzer: ImageButton
     private lateinit var btnPosition: ImageButton
-    private lateinit var btnMode: ImageButton       // Dùng để chuyển đổi giao diện Auto/Manual
+    private lateinit var btnMode: ImageButton
     private lateinit var btnHandlingMode: ImageButton
     private lateinit var btnEmergencyStop: ImageButton
     private lateinit var btnCountPallet: ImageButton
 
-    // --- Các TextView hiển thị số liệu ---
-//    private lateinit var tvPalletCount: TextView
-//    private lateinit var tvLoadCount: TextView
-//    private lateinit var tvUnloadCount: TextView
-
-    // --- Center panel: vị trí Shuttle ---
-    private lateinit var tvShuttlePosition: TextView
-
-    // --- Panel bên trái ---
-    // Auto
+    // Left panel
     private lateinit var layoutAutoLeft: LinearLayout
+    private lateinit var layoutManualLeft: LinearLayout
     private lateinit var btnPickPallets: ImageButton
     private lateinit var btnPickPallet: ImageButton
     private lateinit var btnStackA: ImageButton
-    // Manual
-    private lateinit var layoutManualLeft: LinearLayout
     private lateinit var btnManualForward: ImageButton
     private lateinit var btnManualReverse: ImageButton
 
-    // --- Panel bên phải ---
-    // Auto
+    // Right panel
     private lateinit var layoutAutoRight: LinearLayout
+    private lateinit var layoutManualRight: LinearLayout
     private lateinit var btnTakePallets: ImageButton
     private lateinit var btnTakePallet: ImageButton
     private lateinit var btnStackB: ImageButton
-    // Manual
-    private lateinit var layoutManualRight: LinearLayout
     private lateinit var btnManualUp: ImageButton
     private lateinit var btnManualDown: ImageButton
+    // End region
 
-    // --- Các biến trạng thái nội bộ (được cập nhật từ PLC) ---
-    private var isPowerOn = false
-    private var isLocked = false
-    private var isBuzzerOn = false
-    private var isPositionA = false
-    private var isAutoMode = false
-    private var isFIFO = false
-    private var isCountPallet = false
+    private lateinit var modbusManager: ModbusManager
+    private lateinit var palletHandler: PalletCommandHandler
+    private val buttonLockStates = mutableMapOf<ModbusCommand, Boolean>()
+    private val commandToButtonMap = mutableMapOf<ModbusCommand, ImageButton>()
+    private val uiScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var isConnected = false
 
-    private var isPickPallets = false
-    private var isPickPallet = false
-    private var isStackA = false
-    private var isForward = false
-    private var isReverse = false
-    private var isTakePallets = false
-    private var isTakePallet = false
-    private var isStackB = false
-    private var isUp = false
-    private var isDown = false
+    private data class ButtonState(
+        val command: ModbusCommand,
+        var isActive: Boolean = false,
+        val activeResId: Int,
+        val inactiveResId: Int
+    )
+    private data class ButtonLockCondition(
+        val command: ModbusCommand,
+        val lockCondition: () -> Boolean
+    )
 
-    // Biến điều khiển UI (Auto vs Manual)
-    private var isAutoModeState = true  // true: UI hiển thị Auto; false: hiển thị Manual
+    private val buttonStates = mapOf(
+        ModbusCommand.POWER to ButtonState(ModbusCommand.POWER, activeResId = R.drawable.ic_power_on, inactiveResId = R.drawable.ic_power_off),
+        ModbusCommand.LOCK to ButtonState(ModbusCommand.LOCK, activeResId = R.drawable.ic_lock_closed, inactiveResId = R.drawable.ic_lock_open),
+        ModbusCommand.BUZZER to ButtonState(ModbusCommand.BUZZER, activeResId = R.drawable.ic_buzzer_on, inactiveResId = R.drawable.ic_buzzer_off),
+        ModbusCommand.POSITION to ButtonState(ModbusCommand.POSITION, activeResId = R.drawable.ic_position_a, inactiveResId = R.drawable.ic_position_b),
+        ModbusCommand.MODE to ButtonState(ModbusCommand.MODE, activeResId = R.drawable.ic_mode_auto, inactiveResId = R.drawable.ic_mode_manual),
+        ModbusCommand.HANDLING to ButtonState(ModbusCommand.HANDLING, activeResId = R.drawable.ic_fifo, inactiveResId = R.drawable.ic_lifo),
+        ModbusCommand.EMERGENCY_STOP to ButtonState(ModbusCommand.EMERGENCY_STOP, activeResId = R.drawable.ic_emergency_stop, inactiveResId = R.drawable.ic_emergency_stop),
+        ModbusCommand.COUNT_PALLET to ButtonState(ModbusCommand.COUNT_PALLET, activeResId = R.drawable.ic_count_pallet, inactiveResId = R.drawable.ic_count_pallet),
+        ModbusCommand.PICK_PALLETS to ButtonState(ModbusCommand.PICK_PALLETS, activeResId = R.drawable.ic_pallets_plus1, inactiveResId = R.drawable.ic_pallets_plus2),
+        ModbusCommand.PICK_PALLET to ButtonState(ModbusCommand.PICK_PALLET, activeResId = R.drawable.ic_pallet_plus1, inactiveResId = R.drawable.ic_pallet_plus2),
+        ModbusCommand.STACK_A to ButtonState(ModbusCommand.STACK_A, activeResId = R.drawable.ic_stack_pallets_a1, inactiveResId = R.drawable.ic_stack_pallets_a2),
+        ModbusCommand.FORWARD to ButtonState(ModbusCommand.FORWARD, activeResId = R.drawable.ic_shuttle_forward_on, inactiveResId = R.drawable.ic_shuttle_forward_off),
+        ModbusCommand.REVERSE to ButtonState(ModbusCommand.REVERSE, activeResId = R.drawable.ic_shuttle_reverse_on, inactiveResId = R.drawable.ic_shuttle_reverse_off),
+        ModbusCommand.TAKE_PALLETS to ButtonState(ModbusCommand.TAKE_PALLETS, activeResId = R.drawable.ic_pallets_minus1, inactiveResId = R.drawable.ic_pallets_minus2),
+        ModbusCommand.TAKE_PALLET to ButtonState(ModbusCommand.TAKE_PALLET, activeResId = R.drawable.ic_pallet_minus1, inactiveResId = R.drawable.ic_pallet_minus2),
+        ModbusCommand.STACK_B to ButtonState(ModbusCommand.STACK_B, activeResId = R.drawable.ic_stack_pallets_b1, inactiveResId = R.drawable.ic_stack_pallets_b2),
+        ModbusCommand.UP to ButtonState(ModbusCommand.UP, activeResId = R.drawable.ic_shuttle_up_on, inactiveResId = R.drawable.ic_shuttle_up_off),
+        ModbusCommand.DOWN to ButtonState(ModbusCommand.DOWN, activeResId = R.drawable.ic_shuttle_down_on, inactiveResId = R.drawable.ic_shuttle_down_off)
+    )
 
-    // --- Modbus ---
-    private var connection: TCPMasterConnection? = null
-    @Volatile private var isCommandRunning = false
-    private val modbusScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var pollingJob: Job? = null
+    private fun initButtonLockStates() {
+        buttonStates.keys.forEach { command ->
+            buttonLockStates[command] = false
+        }
+    }
 
-    // --- Thông tin PLC (lấy từ ConfigActivity, lưu trong SharedPreferences) ---
-    private var plcIp: String = ""
-    private var plcPort: Int = 502
+    private val buttonLockConditions = listOf(
+        ButtonLockCondition(ModbusCommand.LOCK) { buttonStates[ModbusCommand.POWER]?.isActive == true },
+        ButtonLockCondition(ModbusCommand.STACK_A) { buttonStates[ModbusCommand.PICK_PALLETS]?.isActive == true && buttonStates[ModbusCommand.PICK_PALLET]?.isActive == true }
+    )
+
+    private fun lockAllButtons() {
+        buttonLockStates.keys.forEach { command -> buttonLockStates[command] = true }
+        updateButtonEnableStates()
+    }
+
+    private fun unlockAllButtons() {
+        buttonLockStates.keys.forEach { command -> buttonLockStates[command] = false }
+        updateButtonEnableStates()
+    }
+
+    private fun applyCrossLocking() {
+        buttonLockConditions.forEach { condition ->
+            buttonLockStates[condition.command] = condition.lockCondition()
+        }
+        updateButtonEnableStates()
+    }
+
+    private fun updateManualButtonState(command: ModbusCommand, active: Boolean) {
+        buttonStates[command]?.let { state ->
+            state.isActive = active
+            updateButtonUI(command)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Lấy thông tin PLC từ SharedPreferences
-        val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
-        plcIp = prefs.getString("modbus_ip", "") ?: ""
-        plcPort = prefs.getInt("modbus_port", 502)
         setContentView(R.layout.activity_main)
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            window.insetsController?.hide(android.view.WindowInsets.Type.statusBars())
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
+        }
+
+        val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+        val plcIp = prefs.getString("modbus_ip", "") ?: ""
+        val plcPort = prefs.getInt("modbus_port", 502)
+        deviceName = prefs.getString("plc_name", "PLC") ?: "PLC"
+        modbusManager = ModbusManager(this, plcIp, plcPort)
+        palletHandler = PalletCommandHandler(this, modbusManager) { canExecuteCommand() }
+
         initViews()
-        // Hiển thị thông tin PLC (ô nhập bị disable)
-        etIp.setText(plcIp)
-        etIp.isEnabled = false
-        tvPLCAddress.text = "PLC: $plcIp:$plcPort"
-        setListeners()
+        setupUI()
+        setupListeners()
     }
 
     private fun initViews() {
-        // --- Các view cấu hình ---
-        tvPLCAddress = findViewById(R.id.tvPLCAddress)
+        tvNameDevice = findViewById(R.id.tvNameDevice)
         etIp = findViewById(R.id.etIp)
         btnConnectDisconnect = findViewById(R.id.btnConnectDisconnect)
         tvStatus = findViewById(R.id.tvStatus)
+        tvShuttlePosition = findViewById(R.id.tvShuttlePosition)
 
-        // --- Các nút ở panel giữa ---
+        btnBack = findViewById(R.id.btnBack)
+
         btnPower = findViewById(R.id.btnPower)
         btnLock = findViewById(R.id.btnLock)
         btnBuzzer = findViewById(R.id.btnBuzzer)
@@ -129,450 +167,259 @@ class MainActivity : ComponentActivity() {
         btnEmergencyStop = findViewById(R.id.btnEmergencyStop)
         btnCountPallet = findViewById(R.id.btnCountPallet)
 
-//        tvPalletCount = findViewById(R.id.tvPalletCount)
-//        tvLoadCount = findViewById(R.id.tvLoadCount)
-//        tvUnloadCount = findViewById(R.id.tvUnloadCount)
-
-        tvShuttlePosition = findViewById(R.id.tvShuttlePosition)
-
-        // --- Panel bên trái ---
-        layoutAutoLeft = findViewById(R.id.layoutAutoLeft)
-        layoutManualLeft = findViewById(R.id.layoutManualLeft)
         btnPickPallets = findViewById(R.id.btnPickPallets)
         btnPickPallet = findViewById(R.id.btnPickPallet)
         btnStackA = findViewById(R.id.btnStackA)
-
-        // --- Panel bên trái Manual ---
-        // (Nếu chưa được dùng, nhưng khai báo cho an toàn)
-        // layoutManualLeft đã khai báo trên
-        btnManualForward = findViewById(R.id.btnManualForward)
-        btnManualReverse = findViewById(R.id.btnManualReverse)
-
-        // --- Panel bên phải ---
-        layoutAutoRight = findViewById(R.id.layoutAutoRight)
-        layoutManualRight = findViewById(R.id.layoutManualRight)
         btnTakePallets = findViewById(R.id.btnTakePallets)
         btnTakePallet = findViewById(R.id.btnTakePallet)
         btnStackB = findViewById(R.id.btnStackB)
 
-        // --- Panel bên phải Manual ---
+        btnManualForward = findViewById(R.id.btnManualForward)
+        btnManualReverse = findViewById(R.id.btnManualReverse)
         btnManualUp = findViewById(R.id.btnManualUp)
         btnManualDown = findViewById(R.id.btnManualDown)
+
+        layoutAutoLeft = findViewById(R.id.layoutAutoLeft)
+        layoutAutoRight = findViewById(R.id.layoutAutoRight)
+        layoutManualLeft = findViewById(R.id.layoutManualLeft)
+        layoutManualRight = findViewById(R.id.layoutManualRight)
+
+        commandToButtonMap[ModbusCommand.POWER] = btnPower
+        commandToButtonMap[ModbusCommand.LOCK] = btnLock
+        commandToButtonMap[ModbusCommand.BUZZER] = btnBuzzer
+        commandToButtonMap[ModbusCommand.POSITION] = btnPosition
+        commandToButtonMap[ModbusCommand.MODE] = btnMode
+        commandToButtonMap[ModbusCommand.HANDLING] = btnHandlingMode
+        commandToButtonMap[ModbusCommand.EMERGENCY_STOP] = btnEmergencyStop
+        commandToButtonMap[ModbusCommand.COUNT_PALLET] = btnCountPallet
+        commandToButtonMap[ModbusCommand.PICK_PALLETS] = btnPickPallets
+        commandToButtonMap[ModbusCommand.PICK_PALLET] = btnPickPallet
+        commandToButtonMap[ModbusCommand.STACK_A] = btnStackA
+        commandToButtonMap[ModbusCommand.FORWARD] = btnManualForward
+        commandToButtonMap[ModbusCommand.REVERSE] = btnManualReverse
+        commandToButtonMap[ModbusCommand.TAKE_PALLETS] = btnTakePallets
+        commandToButtonMap[ModbusCommand.TAKE_PALLET] = btnTakePallet
+        commandToButtonMap[ModbusCommand.STACK_B] = btnStackB
+        commandToButtonMap[ModbusCommand.UP] = btnManualUp
+        commandToButtonMap[ModbusCommand.DOWN] = btnManualDown
+        initButtonLockStates()
     }
 
-    private fun setListeners() {
+    private fun setupUI() {
+        etIp.isEnabled = false
+        tvNameDevice.text = deviceName
+        updateConnectionUI(false)
+    }
+
+    private fun setupListeners() {
         btnConnectDisconnect.setOnClickListener {
-            if (connection == null || !connection!!.isConnected)
-                connectToPLC()
-            else
-                disconnectPLC()
+            if (isConnected) disconnect() else connect()
         }
 
-        // Nút btnMode: chuyển đổi giữa giao diện Auto và Manual (các panel bên trái và bên phải)
-        // Các nút ở panel giữa (gửi lệnh ghi)
-        btnPower.setOnClickListener { handleBooleanCommand("power") }
-        btnLock.setOnClickListener { handleBooleanCommand("lock") }
-        btnBuzzer.setOnClickListener { handleBooleanCommand("buzzer") }
-        btnPosition.setOnClickListener { handleBooleanCommand("position") }
-        btnMode.setOnClickListener { handleBooleanCommand("mode")
-            isAutoModeState = !isAutoModeState
-            if (isAutoModeState) {
-                layoutAutoLeft.visibility = View.VISIBLE
-                layoutAutoRight.visibility = View.VISIBLE
-                layoutManualLeft.visibility = View.GONE
-                layoutManualRight.visibility = View.GONE
-                btnMode.setImageResource(R.drawable.ic_mode_auto)
-            } else {
-                layoutAutoLeft.visibility = View.GONE
-                layoutAutoRight.visibility = View.GONE
-                layoutManualLeft.visibility = View.VISIBLE
-                layoutManualRight.visibility = View.VISIBLE
-                btnMode.setImageResource(R.drawable.ic_mode_manual)
-            }
+        val toggleButtonMappings = listOf(
+            btnPower to ModbusCommand.POWER,
+            btnLock to ModbusCommand.LOCK,
+            btnBuzzer to ModbusCommand.BUZZER,
+            btnPosition to ModbusCommand.POSITION,
+            btnHandlingMode to ModbusCommand.HANDLING,
+            btnEmergencyStop to ModbusCommand.EMERGENCY_STOP,
+            btnCountPallet to ModbusCommand.COUNT_PALLET,
+            btnPickPallet to ModbusCommand.PICK_PALLET,
+            btnStackA to ModbusCommand.STACK_A,
+            btnTakePallet to ModbusCommand.TAKE_PALLET,
+            btnStackB to ModbusCommand.STACK_B
+        )
+
+        toggleButtonMappings.forEach { (button, command) ->
+            ButtonStateHandler.setupToggleButton(
+                button = button,
+                command = command,
+                modbusManager = modbusManager,
+                getCurrentState = { buttonStates[command]?.isActive ?: false },
+                updateButtonUI = { cmd, active ->
+                    buttonStates[cmd]?.isActive = active
+                    updateButtonUI(cmd)
+                },
+                showToast = ::showToast,
+                canExecuteCommand = ::canExecuteCommand
+            )
         }
-        btnHandlingMode.setOnClickListener { handleBooleanCommand("handling") }
-        btnEmergencyStop.setOnClickListener {
-            if (canExecuteCommand())
-                sendBooleanCommand("emergencyStop", true)
-            else
-                showBusyMessage()
+
+        val momentaryButtonMappings = listOf(
+            btnManualForward to ModbusCommand.FORWARD,
+            btnManualReverse to ModbusCommand.REVERSE,
+            btnManualUp to ModbusCommand.UP,
+            btnManualDown to ModbusCommand.DOWN
+        )
+
+        momentaryButtonMappings.forEach { (button, command) ->
+            ButtonStateHandler.setupMomentaryButton(
+                button = button,
+                command = command,
+                modbusManager = modbusManager,
+                updateButtonUI = { cmd, active ->
+                    buttonStates[cmd]?.isActive = active
+                    updateButtonUI(cmd)
+                },
+                showToast = ::showToast,
+                canExecuteCommand = ::canExecuteCommand
+            )
         }
-        btnCountPallet.setOnClickListener { handleBooleanCommand("countPallet")}
 
-        // --- Các nút trong panel bên trái Auto ---
-        btnPickPallets.setOnClickListener {handleBooleanCommand("pickPallets")}
-        btnPickPallet.setOnClickListener {handleBooleanCommand("pickPallet")}
-        btnStackA.setOnClickListener {handleBooleanCommand("stackA")}
+        // Sử dụng ImageButton cho btnPickPallets và btnTakePallets
+        palletHandler.setupPalletButton(btnPickPallets, ModbusCommand.PICK_PALLETS)
+        palletHandler.setupPalletButton(btnTakePallets, ModbusCommand.TAKE_PALLETS)
 
-        // --- Các nút trong panel bên trái Manual ---
-        btnManualForward.setOnClickListener {handleBooleanCommand("forward")}
-        btnManualReverse.setOnClickListener {handleBooleanCommand("reverse")}
-
-        // --- Các nút trong panel bên phải Auto ---
-        btnTakePallets.setOnClickListener {handleBooleanCommand("takePallets")}
-        btnTakePallet.setOnClickListener {handleBooleanCommand("takePallet")}
-        btnStackB.setOnClickListener {handleBooleanCommand("stackB")}
-
-        // --- Các nút trong panel bên phải Manual ---
-        btnManualUp.setOnClickListener {handleBooleanCommand("up")}
-        btnManualDown.setOnClickListener {handleBooleanCommand("down")}
-    }
-
-
-    private fun showToast(message: String) {
-        runOnUiThread { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
-    }
-
-    private fun showBusyMessage() = showToast("Đang xử lý lệnh khác, vui lòng chờ...")
-
-    private fun connectToPLC() {
-        val ipAddress = etIp.text.toString().trim()
-        if (ipAddress.isEmpty()) {
-            updateStatus("IP không được để trống")
-            return
+        btnMode.setOnClickListener {
+            handleCommand(ModbusCommand.MODE)
+            toggleUIMode()
         }
-        modbusScope.launch {
-            try {
-                val addr = InetAddress.getByName(ipAddress)
-                val con = TCPMasterConnection(addr).apply {
-                    port = 502
-                    connect()
-                }
-                connection = con
-                updateStatus("Đã kết nối tới PLC")
-                runOnUiThread { btnConnectDisconnect.text = "Ngắt kết nối" }
-                startPollingState()
-            } catch (e: Exception) {
-                updateStatus("Lỗi kết nối: ${e.message}")
-            }
+
+        btnBack.setOnClickListener {
+            onBackPressed()
         }
     }
 
-    private fun disconnectPLC() {
-        modbusScope.launch {
-            try {
-                pollingJob?.cancel()
-                connection?.close()
-                connection = null
-                updateStatus("Đã ngắt kết nối")
-                runOnUiThread { btnConnectDisconnect.text = "Kết nối" }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                updateStatus("Lỗi khi ngắt kết nối: ${e.localizedMessage}")
-            }
-        }
-    }
-
-    // Hàm polling để đọc dữ liệu từ PLC và cập nhật UI (polling mỗi 500ms)
-    private fun startPollingState() {
-        pollingJob?.cancel()
-        pollingJob = modbusScope.launch {
-            while (isActive && connection?.isConnected == true) {
-                try {
-                    val trans = ModbusTCPTransaction(connection)
-                    trans.request = ReadMultipleRegistersRequest(0, 64)
-                    trans.execute()
-                    val response = trans.response as? ReadMultipleRegistersResponse
-                    response?.let {
-                        runOnUiThread {
-                            btnPower.setImageResource(if (it.getRegisterValue(0) == 1) R.drawable.ic_power_on else R.drawable.ic_power_off)
-                            btnLock.setImageResource(if (it.getRegisterValue(1) == 1) R.drawable.ic_lock_closed else R.drawable.ic_lock_open)
-                            btnBuzzer.setImageResource(if (it.getRegisterValue(2) == 1) R.drawable.ic_buzzer_on else R.drawable.ic_buzzer_off)
-                            btnPosition.setImageResource(if (it.getRegisterValue(3) == 1) R.drawable.ic_position_a else R.drawable.ic_position_b)
-                            btnMode.setImageResource(if (it.getRegisterValue(4) == 1) R.drawable.ic_mode_auto else R.drawable.ic_mode_manual)
-                            btnHandlingMode.setImageResource(if (it.getRegisterValue(5) == 1) R.drawable.ic_fifo else R.drawable.ic_lifo)
-
-                            btnCountPallet.setImageResource(if (it.getRegisterValue(7) == 1) R.drawable.ic_count_pallet_on else R.drawable.ic_count_pallet_on)
-                            btnPickPallets.setImageResource(if (it.getRegisterValue(8) == 1) R.drawable.ic_pallets_plus1 else R.drawable.ic_pallets_plus2)
-                            btnPickPallet.setImageResource(if (it.getRegisterValue(9) == 1) R.drawable.ic_pallet_plus1 else R.drawable.ic_pallet_plus2)
-                            btnStackA.setImageResource(if (it.getRegisterValue(10) == 1) R.drawable.ic_pallet_plus1 else R.drawable.ic_pallet_plus2)
-                            btnTakePallets.setImageResource(if (it.getRegisterValue(11) == 1) R.drawable.ic_pallets_minus1 else R.drawable.ic_pallets_minus2)
-                            btnTakePallet.setImageResource(if (it.getRegisterValue(12) == 1) R.drawable.ic_pallet_minus1 else R.drawable.ic_pallet_minus2)
-                            btnStackB.setImageResource(if (it.getRegisterValue(13) == 1) R.drawable.ic_pallet_plus1 else R.drawable.ic_pallet_plus2)
-                            btnManualForward.setImageResource(if (it.getRegisterValue(14) == 1) R.drawable.ic_shuttle_forward_on else R.drawable.ic_shuttle_forward_off)
-                            btnManualReverse.setImageResource(if (it.getRegisterValue(15) == 1) R.drawable.ic_shuttle_reverse_on else R.drawable.ic_shuttle_reverse_off)
-                            btnManualUp.setImageResource(if (it.getRegisterValue(16) == 1) R.drawable.ic_shuttle_up_on else R.drawable.ic_shuttle_up_off)
-                            btnManualDown.setImageResource(if (it.getRegisterValue(17) == 1) R.drawable.ic_shuttle_down_on else R.drawable.ic_shuttle_down_off)
-
-//                            tvPalletCount.text = "${it.getRegisterValue(19)}"
-//                            tvLoadCount.text = "${it.getRegisterValue(20)}"
-//                            tvUnloadCount.text = "${it.getRegisterValue(21)}"
-                        }
-                    }
-                    delay(500) // Delay 0.5s như yêu cầu
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    updateStatus("Polling error: ${e.localizedMessage}")
-                    delay(1000) // Delay nếu gặp lỗi
-                }
-            }
-        }
-    }
-
-    private fun handleBooleanCommand(command: String) {
+    private fun handleCommand(command: ModbusCommand) {
         if (!canExecuteCommand()) {
             showBusyMessage()
             return
         }
-        when (command) {
-            "power" -> {
-                isPowerOn = !isPowerOn
-                btnPower.setImageResource(if (isPowerOn) R.drawable.ic_power_on else R.drawable.ic_power_off)
-            }
-            "lock" -> {
-                isLocked = !isLocked
-                btnLock.setImageResource(if (isLocked) R.drawable.ic_lock_closed else R.drawable.ic_lock_open)
-            }
-            "buzzer" -> {
-                isBuzzerOn = !isBuzzerOn
-                btnBuzzer.setImageResource(if (isBuzzerOn) R.drawable.ic_buzzer_on else R.drawable.ic_buzzer_off)
-            }
-            "position" -> {
-                isPositionA = !isPositionA
-                btnPosition.setImageResource(if (isPositionA) R.drawable.ic_position_a else R.drawable.ic_position_b)
-            }
-            "mode" -> {
-                isAutoMode = !isAutoMode
-                btnMode.setImageResource(if (isAutoMode) R.drawable.ic_mode_auto else R.drawable.ic_mode_manual)
-            }
-            "handling" -> {
-                isFIFO = !isFIFO
-                btnHandlingMode.setImageResource(if (isFIFO) R.drawable.ic_fifo else R.drawable.ic_lifo)
-            }
-            "countPallet" -> {
-                isCountPallet = !isCountPallet
-                btnCountPallet.setImageResource(if (isCountPallet) R.drawable.ic_count_pallet_on else R.drawable.ic_count_pallet_off)
-            }
-            "pickPallets" -> {
-                isPickPallets = !isPickPallets
-                btnPickPallets.setImageResource(if (isPickPallets) R.drawable.ic_pallets_plus1 else R.drawable.ic_pallets_plus2)
-            }
-            "pickPallet" -> {
-                isPickPallet = !isPickPallet
-                btnPickPallet.setImageResource(if (isPickPallet) R.drawable.ic_pallet_plus1 else R.drawable.ic_pallet_plus2)
-            }
-            "stackA" -> {
-                isStackA = !isStackA
-                btnStackA.setImageResource(if (isStackA) R.drawable.ic_stack_pallets_a1 else R.drawable.ic_stack_pallets_a2)
-            }
-            "forward" -> {
-                isForward = !isForward
-                btnManualForward.setImageResource(if (isForward) R.drawable.ic_shuttle_forward_on else R.drawable.ic_shuttle_forward_off)
-            }
-            "reverse" -> {
-                isReverse = !isReverse
-                btnManualReverse.setImageResource(if (isReverse) R.drawable.ic_shuttle_reverse_on else R.drawable.ic_shuttle_reverse_off)
-            }
-            "takePallets" -> {
-                isTakePallets = !isTakePallets
-                btnTakePallets.setImageResource(if (isTakePallets) R.drawable.ic_pallets_minus1 else R.drawable.ic_pallets_minus2)
-            }
-            "takePallet" -> {
-                isTakePallet = !isTakePallet
-                btnTakePallet.setImageResource(if (isTakePallet) R.drawable.ic_pallet_minus1 else R.drawable.ic_pallet_minus2)
-            }
-            "stackB" -> {
-                isStackB = !isStackB
-                btnStackB.setImageResource(if (isStackB) R.drawable.ic_stack_pallets_b1 else R.drawable.ic_stack_pallets_b2)
-            }
-            "up" -> {
-                isUp = !isUp
-                btnManualUp.setImageResource(if (isUp) R.drawable.ic_shuttle_up_on else R.drawable.ic_shuttle_up_off)
-            }
-            "down" -> {
-                isDown = !isDown
-                btnManualDown.setImageResource(if (isDown) R.drawable.ic_shuttle_down_on else R.drawable.ic_shuttle_down_off)
-            }
-        }
-        val state = when (command) {
-            "power" -> isPowerOn
-            "lock" -> isLocked
-            "buzzer" -> isBuzzerOn
-            "position" -> isPositionA
-            "mode" -> isAutoMode
-            "handling" -> isFIFO
-            "countPallet" -> isCountPallet
 
-            "pickPallets" -> isPickPallets
-            "pickPallet" -> isPickPallet
-            "stackA" -> isStackA
-            "forward" -> isForward
-            "reverse" -> isReverse
-            "takePallets" -> isTakePallets
-            "takePallet" -> isTakePallet
-            "stackB" -> isStackB
-            "up" -> isUp
-            "down" -> isDown
-            else -> false
-        }
-        sendBooleanCommandTest(command, state)
-    }
-
-    private fun sendBooleanCommand(command: String, state: Boolean) {
-        modbusScope.launch {
-            isCommandRunning = true
+        uiScope.launch {
             try {
-                val registerAddress = when (command) {
-                    "power" -> 1
-                    "lock" -> 2
-                    "buzzer" -> 3
-                    "position" -> 4
-                    "mode" -> 5
-                    "handling" -> 6
-                    "emergencyStop" -> 7
-                    "countPallet" ->8
-                    "pickPallets" -> 9
-                    "pickPallet" -> 10
-                    "stackA" -> 11
-                    "forward" -> 12
-                    "reverse" -> 13
-                    "takePallets" -> 14
-                    "takePallet" -> 15
-                    "stackB" -> 16
-                    "up" -> 17
-                    "down" -> 18
-                    else -> return@launch
-                }
-                val valueToSend = if (state) 1 else 0
-                val writeReq = WriteSingleRegisterRequest(registerAddress - 1, SimpleRegister(valueToSend))
-                val trans = ModbusTCPTransaction(connection)
-                trans.request = writeReq
-                trans.execute()
-                updateStatus("Lệnh $command gửi: $valueToSend")
+                val state = buttonStates[command]!!
+                val newValue = if (state.isActive) 0 else 1
+                modbusManager.writeCommand(command.address, newValue)
+                state.isActive = !state.isActive
+                updateButtonUI(command)
             } catch (e: Exception) {
-                e.printStackTrace()
-                updateStatus("Lỗi $command: ${e.localizedMessage}")
-            } finally {
-                isCommandRunning = false
+                showToast("Lỗi: ${e.message}")
             }
         }
     }
 
-    private fun sendBooleanCommandTest(command: String, state: Boolean) {
-        modbusScope.launch {
-            isCommandRunning = true
-            try {
-                val registerAddress = when (command) {
-                    "power" -> 1
-                    "lock" -> 2
-                    "buzzer" -> 3
-                    "position" -> 4
-                    "mode" -> 5
-                    "handling" -> 6
-                    "emergencyStop" -> 7
-                    "countPallet" ->8
-                    "pickPallets" -> 9
-                    "pickPallet" -> 10
-                    "stackA" -> 11
-                    "forward" -> 12
-                    "reverse" -> 13
-                    "takePallets" -> 14
-                    "takePallet" -> 15
-                    "stackB" -> 16
-                    "up" -> 17
-                    "down" -> 18
-                    else -> return@launch
-                }
-                // Bước 1: Đọc giá trị hiện tại
-                val readTrans = ModbusTCPTransaction(connection)
-                readTrans.request = ReadMultipleRegistersRequest(registerAddress - 1, 1)
-                readTrans.execute()
-                val response = readTrans.response as? ReadMultipleRegistersResponse
-                response?.let { res -> val currentValue = res.getRegisterValue(0)
-                    val valueToSend = if (currentValue == 1) 0 else 1
-                    // Bước 2: Ghi giá trị mới
-                    val writeTrans = ModbusTCPTransaction(connection)
-                    val writeReq = WriteSingleRegisterRequest(registerAddress - 1, SimpleRegister(valueToSend))
-                    writeTrans.request = writeReq
-                    writeTrans.execute()
-                    withContext(Dispatchers.Main) {
-                        updateStatus("Lệnh $command gửi: $valueToSend")
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                updateStatus("Lỗi $command: ${e.localizedMessage}")
-            } finally {
-                isCommandRunning = false
+    private fun toggleUIMode() {
+        val isAutoMode = buttonStates[ModbusCommand.MODE]?.isActive ?: true
+        layoutAutoLeft.visibility = if (isAutoMode) View.VISIBLE else View.GONE
+        layoutManualLeft.visibility = if (!isAutoMode) View.VISIBLE else View.GONE
+        layoutAutoRight.visibility = if (isAutoMode) View.VISIBLE else View.GONE
+        layoutManualRight.visibility = if (!isAutoMode) View.VISIBLE else View.GONE
+    }
+
+    private fun updateButtonUI(command: ModbusCommand) {
+        buttonStates[command]?.let { state ->
+            val button = commandToButtonMap[command]
+            button?.updateModbusState(
+                isActive = state.isActive,
+                activeResId = state.activeResId,
+                inactiveResId = state.inactiveResId
+            )
+        }
+    }
+
+    private fun updateButtonEnableStates() {
+        buttonLockStates.forEach { (command, isLocked) ->
+            val button = commandToButtonMap[command]
+            button?.isEnabled = !isLocked
+        }
+    }
+
+    @Suppress("MissingSuperCall")
+    override fun onBackPressed() {
+        disconnect()
+        val intent = Intent(this, ConfigActivity::class.java)
+        startActivity(intent)
+        finish()
+    }
+
+    private fun connect() {
+        if (isConnected) return
+        uiScope.launch {
+            val success = modbusManager.connect()
+            if (success) {
+                isConnected = true
+                updateConnectionUI(true)
+                startPolling()
+            } else {
+                showToast("Kết nối thất bại")
             }
         }
     }
 
-    // Ví dụ hàm toggle dựa trên giá trị hiện tại từ PLC
-    private fun sendBooleanCommandTest1(command: String, state: Boolean) {
-        modbusScope.launch {
-            isCommandRunning = true
-            try {
-                val registerAddress = when (command) {
-                    "power" -> 1
-                    "lock" -> 2
-                    "buzzer" -> 3
-                    "position" -> 4
-                    "mode" -> 5
-                    "handling" -> 6
-                    "emergencyStop" -> 7
-                    else -> return@launch
+    private fun startPolling() {
+        modbusManager.startPolling { result ->
+            when (result) {
+                is ModbusManager.ModbusResult.Success -> {
+                    runOnUiThread { updateUI(result.response) }
                 }
-                // Bước 1: Đọc giá trị hiện tại
-                val readTrans = ModbusTCPTransaction(connection)
-                readTrans.request = ReadMultipleRegistersRequest(registerAddress - 1, 1)
-                readTrans.execute()
-                val response = readTrans.response as? ReadMultipleRegistersResponse
-                response?.let { res ->
-                    val currentValue = res.getRegisterValue(0)
-                    val valueToSend = if (currentValue == 1) 0 else 1
-                    // Bước 2: Ghi giá trị mới
-                    val writeTrans = ModbusTCPTransaction(connection)
-                    val writeReq = WriteSingleRegisterRequest(registerAddress - 1, SimpleRegister(valueToSend))
-                    writeTrans.request = writeReq
-                    writeTrans.execute()
-                    withContext(Dispatchers.Main) {
-                        updateStatus("Lệnh $command gửi: $valueToSend")
-                    }
+                is ModbusManager.ModbusResult.Error -> {
+                    runOnUiThread { showToast(result.message) }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                updateStatus("Lỗi $command: ${e.localizedMessage}")
-            } finally {
-                isCommandRunning = false
             }
         }
     }
 
-    private fun sendNumericCommand(command: String, value: Int) {
-        modbusScope.launch {
-            isCommandRunning = true
-            try {
-                val registerAddress = when (command) {
-                    "load" -> 21
-                    "unload" -> 22
-                    else -> return@launch
-                }
-                val writeReq = WriteSingleRegisterRequest(registerAddress - 1, SimpleRegister(value))
-                val trans = ModbusTCPTransaction(connection)
-                trans.request = writeReq
-                trans.execute()
-                updateStatus("Lệnh $command gửi: $value")
-            } catch (e: Exception) {
-                e.printStackTrace()
-                updateStatus("Lỗi $command: ${e.localizedMessage}")
-            } finally {
-                isCommandRunning = false
-            }
+    private fun updateUI(response: ReadMultipleRegistersResponse) {
+        buttonStates.forEach { (command, state) ->
+            state.isActive = response.getRegisterValue(command.address - 1) == 1
+            updateButtonUI(command)
+        }
+
+        val errorCode = response.getRegisterValue(59)
+        if (errorCode == 8085) {
+            lockAllButtons()
+        } else {
+            unlockAllButtons()
+            applyCrossLocking()
+        }
+
+        val position = response.getRegisterValue(ModbusCommand.POSITION.address - 1)
+        tvShuttlePosition.text = "Vị trí Shuttle: ${if (position == 1) "A" else "B"}"
+    }
+
+    private fun disconnect() {
+        if (!isConnected) return
+        try {
+            modbusManager.disconnect()
+            isConnected = false
+            updateConnectionUI(false)
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error in disconnect: ${e.message}", e)
+            showToast("Lỗi ngắt kết nối: ${e.message}")
         }
     }
 
-    private fun updateStatus(msg: String) {
-        runOnUiThread { tvStatus.text = msg }
+    private fun updateConnectionUI(connected: Boolean) {
+        btnConnectDisconnect.text = if (connected) "Ngắt kết nối" else "Kết nối"
+        tvStatus.text = if (connected) "Đã kết nối" else "Chưa kết nối"
     }
 
-    private fun canExecuteCommand() = !isCommandRunning && (connection?.isConnected == true)
+    private fun canExecuteCommand() = isConnected && !modbusManager.isBusy
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showBusyMessage() = showToast("Đang xử lý lệnh khác, vui lòng chờ...")
+
+    override fun onResume() {
+        super.onResume()
+        val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+        deviceName = prefs.getString("plc_name", "PLC") ?: "PLC"
+        setupUI()
+    }
 
     override fun onDestroy() {
         super.onDestroy()
-        pollingJob?.cancel()
-        modbusScope.cancel()
-        connection?.close()
+        try {
+            if (this::modbusManager.isInitialized) {
+                modbusManager.disconnect()
+            }
+            uiScope.cancel("Activity destroyed")
+            Log.d("MainActivity", "onDestroy completed")
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error in onDestroy: ${e.message}", e)
+        }
     }
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -58,6 +58,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    implementation("androidx.appcompat:appcompat:1.6.1")
     //implementation("com.android.tools.build:gradle:7.3.1")
     implementation("com.ghgande:j2mod:2.7.0")
     // https://mvnrepository.com/artifact/net.wimpi/jamod
