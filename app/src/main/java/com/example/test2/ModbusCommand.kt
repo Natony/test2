@@ -18,5 +18,6 @@ enum class ModbusCommand(val address: Int) {
     FORWARD(15),
     REVERSE(16),
     UP(17),
-    DOWN(18)
+    DOWN(18),
+    LOCATION(19)
 }

@@ -15,7 +15,6 @@ class MainActivity : ComponentActivity() {
     // Region: View declarations
     private lateinit var tvNameDevice: TextView
     private var deviceName: String = "PLC"
-    private lateinit var tvPLCAddress: TextView
     private lateinit var etIp: EditText
     private lateinit var btnConnectDisconnect: Button
     private lateinit var tvStatus: TextView
@@ -54,6 +53,8 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var modbusManager: ModbusManager
     private lateinit var palletHandler: PalletCommandHandler
+    private lateinit var shuttleIndicator: ShuttlePositionIndicator
+
     private val buttonLockStates = mutableMapOf<ModbusCommand, Boolean>()
     private val commandToButtonMap = mutableMapOf<ModbusCommand, ImageButton>()
     private val uiScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -144,6 +145,43 @@ class MainActivity : ComponentActivity() {
         modbusManager = ModbusManager(this, plcIp, plcPort)
         palletHandler = PalletCommandHandler(this, modbusManager) { canExecuteCommand() }
 
+        val icons = listOf(
+            findViewById<ImageView>(R.id.pos1),
+            findViewById(R.id.pos2),
+            findViewById(R.id.pos3),
+            findViewById(R.id.pos4),
+            findViewById(R.id.pos5),
+            findViewById(R.id.pos6),
+            findViewById(R.id.pos7),
+            findViewById(R.id.pos8),
+            findViewById(R.id.pos9),
+            findViewById(R.id.pos10),
+            findViewById(R.id.pos11),
+            findViewById(R.id.pos12),
+            findViewById(R.id.pos13)
+        )
+        val onRes = listOf(
+            R.drawable.ic_pos1_on, R.drawable.ic_pos2_on,
+            R.drawable.ic_pos3_on, R.drawable.ic_pos4_on,
+            R.drawable.ic_pos5_on, R.drawable.ic_pos6_on,
+            R.drawable.ic_pos7_on, R.drawable.ic_pos8_on,
+            R.drawable.ic_pos9_on, R.drawable.ic_pos10_on,
+            R.drawable.ic_pos11_on, R.drawable.ic_pos12_on,
+            R.drawable.ic_pos13_on
+        )
+        val offRes = listOf(
+            R.drawable.ic_pos1_off, R.drawable.ic_pos2_off,
+            R.drawable.ic_pos3_off, R.drawable.ic_pos4_off,
+            R.drawable.ic_pos5_off, R.drawable.ic_pos6_off,
+            R.drawable.ic_pos7_off, R.drawable.ic_pos8_off,
+            R.drawable.ic_pos9_off, R.drawable.ic_pos10_off,
+            R.drawable.ic_pos11_off, R.drawable.ic_pos12_off,
+            R.drawable.ic_pos13_off
+        )
+        val shuttle = findViewById<ImageView>(R.id.ivShuttle)
+        val belt    = findViewById<View>(R.id.vBelt)
+
+        shuttleIndicator = ShuttlePositionIndicator(icons, onRes, offRes, shuttle, belt)
         initViews()
         setupUI()
         setupListeners()
@@ -374,8 +412,11 @@ class MainActivity : ComponentActivity() {
             applyCrossLocking()
         }
 
-        val position = response.getRegisterValue(ModbusCommand.POSITION.address - 1)
-        tvShuttlePosition.text = "Vị trí Shuttle: ${if (position == 1) "A" else "B"}"
+        val posReg = response.getRegisterValue(ModbusCommand.LOCATION.address - 1)
+        val iconIndex = posReg.coerceIn(1, 13)
+        tvShuttlePosition.text = "Vị trí Shuttle: $iconIndex"
+        shuttleIndicator.update(iconIndex)
+
     }
 
     private fun disconnect() {

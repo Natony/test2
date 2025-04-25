@@ -20,8 +20,9 @@
         android:id="@+id/leftPanel"
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="">
+        android:layout_weight="0.5">
         <!-- Sẽ dùng ViewFlipper hoặc hai layout riêng AutoLeft và ManualLeft để thay đổi theo chế độ -->
+
         <LinearLayout
             android:id="@+id/layoutAutoLeft"
             android:layout_width="match_parent"
@@ -38,8 +39,8 @@
 
                 <ImageButton
                     android:id="@+id/btnPickPallets"
-                    android:layout_width="190dp"
-                    android:layout_height="100dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:adjustViewBounds="true"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:scaleType="fitCenter"
@@ -55,8 +56,8 @@
 
                 <ImageButton
                     android:id="@+id/btnPickPallet"
-                    android:layout_width="190dp"
-                    android:layout_height="100dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:adjustViewBounds="true"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:scaleType="fitCenter"
@@ -72,8 +73,8 @@
 
                 <ImageButton
                     android:id="@+id/btnStackA"
-                    android:layout_width="190dp"
-                    android:layout_height="100dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:adjustViewBounds="true"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:scaleType="fitCenter"
@@ -118,16 +119,117 @@
         android:orientation="vertical"
         android:gravity="center">
         <!-- Hiển thị vị trí của Shuttle (đọc từ PLC) -->
+        <LinearLayout
+            android:id="@+id/llPositions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Dùng drawable selector để sang/tắt -->
+            <ImageView
+                android:id="@+id/pos1"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos1_off" />
+            <ImageView
+                android:id="@+id/pos2"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos2_off" />
+            <ImageView
+                android:id="@+id/pos3"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos3_off" />
+            <ImageView
+                android:id="@+id/pos4"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos4_off" />
+            <ImageView
+                android:id="@+id/pos5"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos5_off" />
+            <ImageView
+                android:id="@+id/pos6"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos6_off" />
+            <ImageView
+                android:id="@+id/pos7"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos7_off" />
+            <ImageView
+                android:id="@+id/pos8"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos8_off" />
+            <ImageView
+                android:id="@+id/pos9"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos9_off" />
+            <ImageView
+                android:id="@+id/pos10"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos10_off" />
+            <ImageView
+                android:id="@+id/pos11"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos11_off" />
+            <ImageView
+                android:id="@+id/pos12"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos12_off" />
+            <ImageView
+                android:id="@+id/pos13"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_pos13_off" />
+        </LinearLayout>
+
         <!-- Hiển thị địa chỉ PLC đã được cấu hình (được lấy từ ConfigActivity) -->
+
+        <!-- Khu vực kết nối -->
+        <LinearLayout
+            android:id="@+id/llPositionsShuttle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/vBelt"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="1dp"
+                android:background="@drawable/belt_shape" />
+            <!-- belt_shape: shape trắng có viền như mockup của bạn -->
+
+            <!-- Icon shuttle -->
+            <ImageView
+                android:id="@+id/ivShuttle"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginTop="1dp"
+                android:src="@drawable/ic_shuttle"/>
+
+        </LinearLayout>
+
         <TextView
             android:id="@+id/tvNameDevice"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="4dp"
             android:textSize="16sp"
-            android:textStyle="bold"
-            android:padding="4dp" />
+            android:textStyle="bold" />
 
-        <!-- Khu vực kết nối -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -281,8 +383,8 @@
 
                 <ImageButton
                     android:id="@+id/btnTakePallets"
-                    android:layout_width="190dp"
-                    android:layout_height="100dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:adjustViewBounds="true"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:scaleType="fitCenter"
@@ -298,8 +400,8 @@
 
                 <ImageButton
                     android:id="@+id/btnTakePallet"
-                    android:layout_width="190dp"
-                    android:layout_height="100dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:adjustViewBounds="true"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:scaleType="fitCenter"
@@ -315,8 +417,8 @@
 
                 <ImageButton
                     android:id="@+id/btnStackB"
-                    android:layout_width="190dp"
-                    android:layout_height="100dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:adjustViewBounds="true"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:scaleType="fitCenter"
