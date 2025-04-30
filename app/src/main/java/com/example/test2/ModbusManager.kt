@@ -7,11 +7,12 @@ import net.wimpi.modbus.io.ModbusTCPTransaction
 import net.wimpi.modbus.msg.ReadMultipleRegistersRequest
 import net.wimpi.modbus.msg.ReadMultipleRegistersResponse
 import net.wimpi.modbus.msg.WriteSingleRegisterRequest
+import net.wimpi.modbus.msg.WriteSingleRegisterResponse
 import net.wimpi.modbus.net.TCPMasterConnection
 import net.wimpi.modbus.procimg.SimpleRegister
 import java.net.InetAddress
-import android.widget.*
-import java.net.Socket
+import java.util.concurrent.atomic.AtomicBoolean
+
 
 class ModbusManager(private val context: Context, val ip: String, val port: Int = 502) {
     @Volatile
@@ -125,15 +126,15 @@ class ModbusManager(private val context: Context, val ip: String, val port: Int 
     /**
      * Hàm đọc một thanh ghi (1 từ) theo địa chỉ.
      */
-        suspend fun readRegister(register: Int): Int {
-            return withContext(Dispatchers.IO) {
-                val trans = ModbusTCPTransaction(connection)
-                trans.request = ReadMultipleRegistersRequest(register - 1, 1)
-                trans.execute()
-                val response = trans.response as ReadMultipleRegistersResponse
-                response.getRegisterValue(0)
-            }
+    suspend fun readRegister(register: Int): Int {
+        return withContext(Dispatchers.IO) {
+            val trans = ModbusTCPTransaction(connection)
+            trans.request = ReadMultipleRegistersRequest(register - 1, 1)
+            trans.execute()
+            val response = trans.response as ReadMultipleRegistersResponse
+            response.getRegisterValue(0)
         }
+    }
 
     /**
      * Hàm đọc nhiều thanh ghi.

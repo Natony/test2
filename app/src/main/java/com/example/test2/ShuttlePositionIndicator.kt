@@ -17,7 +17,7 @@ class ShuttlePositionIndicator(
     }
 
     /**
-     * pos: 1..6
+     * pos: 1..13
      */
     fun update(pos: Int) {
         // 1) cập nhật trạng thái on/off các ô số

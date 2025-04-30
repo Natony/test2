@@ -199,15 +199,17 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center_horizontal">
+
                 <ImageButton
                     android:id="@+id/btnHandlingMode"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:src="@drawable/ic_fifo"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:adjustViewBounds="true"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Xử lý"
                     android:scaleType="fitCenter"
-                    android:contentDescription="Xử lý" />
+                    android:src="@drawable/ic_fifo" />
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

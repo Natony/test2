@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/llBeltShuttle"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center"
+    android:paddingTop="1dp">
+
+    <View
+        android:id="@+id/vBelt"
+        android:layout_width="wrap_content"
+        android:layout_height="60dp"
+        android:background="@drawable/belt_shape" />
+
+    <ImageView
+        android:id="@+id/ivShuttle"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginTop="1dp"
+        android:src="@drawable/ic_shuttle"/>
+</LinearLayout>

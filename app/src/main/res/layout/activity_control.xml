@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.5">
+            <include layout="@layout/layout_auto_left"
+                android:id="@+id/layoutAutoLeft"/>
+            <include layout="@layout/layout_manual_left"
+                android:id="@+id/layoutManualLeft"/>
+        </FrameLayout>
+
+        <!-- CENTER PANEL -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+                <include layout="@layout/layout_positions_strip"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <include layout="@layout/layout_belt_shuttle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+                <include layout="@layout/layout_connection_row"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+                <include layout="@layout/layout_center_controls"/>
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- RIGHT PANEL -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.5">
+            <include layout="@layout/layout_auto_right"
+                android:id="@+id/layoutAutoRight"/>
+            <include layout="@layout/layout_manual_right"
+                android:id="@+id/layoutManualRight"/>
+        </FrameLayout>
+    </LinearLayout>
+
+</LinearLayout>

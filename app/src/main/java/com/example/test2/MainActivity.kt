@@ -9,18 +9,21 @@ import android.widget.*
 import androidx.activity.ComponentActivity
 import kotlinx.coroutines.*
 import net.wimpi.modbus.msg.ReadMultipleRegistersResponse
+import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity () {
 
     // Region: View declarations
     private lateinit var tvNameDevice: TextView
     private var deviceName: String = "PLC"
-    private lateinit var etIp: EditText
     private lateinit var btnConnectDisconnect: Button
     private lateinit var tvStatus: TextView
-    private lateinit var tvShuttlePosition: TextView
-
     private lateinit var btnBack: ImageButton
+
+    // navigation buttons
+    private lateinit var btnControl: ImageButton
+    private lateinit var btnConfig: ImageButton
 
     // Center panel buttons
     private lateinit var btnPower: ImageButton
@@ -54,6 +57,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var modbusManager: ModbusManager
     private lateinit var palletHandler: PalletCommandHandler
     private lateinit var shuttleIndicator: ShuttlePositionIndicator
+    private val errorHandler = PlcErrorHandler()
 
     private val buttonLockStates = mutableMapOf<ModbusCommand, Boolean>()
     private val commandToButtonMap = mutableMapOf<ModbusCommand, ImageButton>()
@@ -113,12 +117,56 @@ class MainActivity : ComponentActivity() {
         updateButtonEnableStates()
     }
 
-    private fun applyCrossLocking() {
-        buttonLockConditions.forEach { condition ->
-            buttonLockStates[condition.command] = condition.lockCondition()
+//    private fun applyCrossLocking() {
+//        buttonLockConditions.forEach { condition ->
+//            buttonLockStates[condition.command] = condition.lockCondition()
+//        }
+//        updateButtonEnableStates()
+//    }
+private fun applyCrossLocking() {
+    // 1) Nếu đang emergency (PLC lỗi hoặc E-Stop đang active)
+    if (errorHandler.emergencyActive) {
+        // Khóa tất cả, chỉ mở nút EMERGENCY_STOP
+        buttonLockStates.keys.forEach { cmd ->
+            buttonLockStates[cmd] = (cmd != ModbusCommand.EMERGENCY_STOP)
         }
         updateButtonEnableStates()
+        return
     }
+
+    // 2) Định nghĩa các nút luôn được phép khi không emergency
+    val specialCommands = setOf(
+        ModbusCommand.MODE,
+        ModbusCommand.POWER,
+        ModbusCommand.EMERGENCY_STOP
+    )
+
+    // 3) Tập các nút chức năng đang active (loại bỏ specialCommands)
+    val activeFunctions = buttonStates
+        .filter { (cmd, state) ->
+            cmd !in specialCommands && state.isActive
+        }
+        .keys
+
+    // 4) Nếu đúng 1 nút chức năng active → khóa tất cả các chức năng khác
+    val lockOthers = (activeFunctions.size == 1)
+
+    buttonLockStates.forEach { (cmd, _) ->
+        buttonLockStates[cmd] = when {
+            // Luôn mở các nút đặc thù
+            cmd in specialCommands -> false
+
+            // Nếu có đúng 1 chức năng active,
+            // khoá các nút chức năng khác
+            lockOthers && cmd !in activeFunctions -> true
+
+            // Trong mọi trường hợp khác → mở
+            else -> false
+        }
+    }
+
+    updateButtonEnableStates()
+}
 
     private fun updateManualButtonState(command: ModbusCommand, active: Boolean) {
         buttonStates[command]?.let { state ->
@@ -180,8 +228,8 @@ class MainActivity : ComponentActivity() {
         )
         val shuttle = findViewById<ImageView>(R.id.ivShuttle)
         val belt    = findViewById<View>(R.id.vBelt)
-
         shuttleIndicator = ShuttlePositionIndicator(icons, onRes, offRes, shuttle, belt)
+
         initViews()
         setupUI()
         setupListeners()
@@ -189,11 +237,8 @@ class MainActivity : ComponentActivity() {
 
     private fun initViews() {
         tvNameDevice = findViewById(R.id.tvNameDevice)
-        etIp = findViewById(R.id.etIp)
         btnConnectDisconnect = findViewById(R.id.btnConnectDisconnect)
         tvStatus = findViewById(R.id.tvStatus)
-        tvShuttlePosition = findViewById(R.id.tvShuttlePosition)
-
         btnBack = findViewById(R.id.btnBack)
 
         btnPower = findViewById(R.id.btnPower)
@@ -244,7 +289,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupUI() {
-        etIp.isEnabled = false
         tvNameDevice.text = deviceName
         updateConnectionUI(false)
     }
@@ -339,10 +383,12 @@ class MainActivity : ComponentActivity() {
 
     private fun toggleUIMode() {
         val isAutoMode = buttonStates[ModbusCommand.MODE]?.isActive ?: true
-        layoutAutoLeft.visibility = if (isAutoMode) View.VISIBLE else View.GONE
-        layoutManualLeft.visibility = if (!isAutoMode) View.VISIBLE else View.GONE
-        layoutAutoRight.visibility = if (isAutoMode) View.VISIBLE else View.GONE
-        layoutManualRight.visibility = if (!isAutoMode) View.VISIBLE else View.GONE
+
+        layoutAutoLeft.visibility = if (!isAutoMode) View.VISIBLE else View.GONE
+        layoutManualLeft.visibility = if (isAutoMode) View.VISIBLE else View.GONE
+
+        layoutAutoRight.visibility = if (!isAutoMode) View.VISIBLE else View.GONE
+        layoutManualRight.visibility = if (isAutoMode) View.VISIBLE else View.GONE
     }
 
     private fun updateButtonUI(command: ModbusCommand) {
@@ -378,6 +424,7 @@ class MainActivity : ComponentActivity() {
             if (success) {
                 isConnected = true
                 updateConnectionUI(true)
+                toggleUIMode()
                 startPolling()
             } else {
                 showToast("Kết nối thất bại")
@@ -405,16 +452,14 @@ class MainActivity : ComponentActivity() {
         }
 
         val errorCode = response.getRegisterValue(59)
-        if (errorCode == 8085) {
-            lockAllButtons()
-        } else {
-            unlockAllButtons()
-            applyCrossLocking()
-        }
+        errorHandler.updateErrorCode(errorCode)
+
+        applyCrossLocking()
+
+        toggleUIMode()
 
         val posReg = response.getRegisterValue(ModbusCommand.LOCATION.address - 1)
         val iconIndex = posReg.coerceIn(1, 13)
-        tvShuttlePosition.text = "Vị trí Shuttle: $iconIndex"
         shuttleIndicator.update(iconIndex)
 
     }
