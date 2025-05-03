@@ -1,62 +1,70 @@
 package com.example.test2
 
+import android.annotation.SuppressLint
 import android.view.MotionEvent
-import android.view.View
 import android.widget.ImageButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
- * Class này đảm nhiệm việc xử lý hành vi nhấn giữ và nhả cho một nút manual.
- * Khi người dùng nhấn giữ (ACTION_DOWN) sẽ gửi command có giá trị 1,
- * còn khi nhả (ACTION_UP hoặc ACTION_CANCEL) thì gửi command có giá trị 0.
+ * Handles both “momentary” (press-and-hold) and “toggle” behaviors for ImageButton.
+ *
+ * @param scope       CoroutineScope to launch IO/Main work (e.g. viewLifecycleOwner.lifecycleScope)
  */
-object ButtonStateHandler {
+class ButtonStateHandler(private val scope: CoroutineScope) {
+
     /**
-     * Thiết lập nút theo dạng "nhấn – nhả" (momentary button):
-     * - Khi nhấn giữ (ACTION_DOWN), gửi lệnh kích hoạt (ví dụ: 1).
-     * - Khi nhả (ACTION_UP hoặc ACTION_CANCEL), gửi lệnh tắt (ví dụ: 0).
-     *
-     * @param button Nút ImageButton cần xử lý.
-     * @param command Command ứng với nút (được định nghĩa trong enum, data class, …).
-     * @param modbusManager Đối tượng quản lý giao tiếp Modbus.
-     * @param updateButtonUI Hàm callback để cập nhật lại giao diện nút theo trạng thái (true: active, false: inactive).
-     * @param showToast Hàm callback hiển thị thông báo lỗi/ thông điệp.
-     * @param canExecuteCommand Hàm callback kiểm tra điều kiện cho phép thực hiện lệnh.
+     * Momentary button: ACTION_DOWN → send “1”, ACTION_UP/CANCEL → send “0”.
      */
+    @SuppressLint("ClickableViewAccessibility")
     fun setupMomentaryButton(
         button: ImageButton,
         command: ModbusCommand,
         modbusManager: ModbusManager,
-        updateButtonUI: (command: ModbusCommand, active: Boolean) -> Unit,
-        showToast: (message: String) -> Unit,
+        updateButtonUI: (ModbusCommand, Boolean) -> Unit,
+        showToast: (String) -> Unit,
         canExecuteCommand: () -> Boolean
     ) {
+        var isDownProcessed = false
+
         button.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    if (!canExecuteCommand()) {
-                        showToast("Đang xử lý lệnh khác, vui lòng chờ...")
-                        return@setOnTouchListener true
-                    }
-                    CoroutineScope(Dispatchers.Main).launch {
-                        try {
-                            modbusManager.writeCommand(command.address, 1)
-                            updateButtonUI(command, true)
-                        } catch (e: Exception) {
-                            showToast("Lỗi: ${e.message}")
+                    if (!isDownProcessed && canExecuteCommand()) {
+                        isDownProcessed = true
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                modbusManager.writeCommand(command.address, 1)
+                                withContext(Dispatchers.Main) {
+                                    updateButtonUI(command, true)
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    showToast("Error: ${e.message}")
+                                    updateButtonUI(command, false)
+                                }
+                            }
                         }
+                    } else if (!canExecuteCommand()) {
+                        showToast("System busy, please wait…")
                     }
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    CoroutineScope(Dispatchers.Main).launch {
+                    scope.launch(Dispatchers.IO) {
                         try {
                             modbusManager.writeCommand(command.address, 0)
-                            updateButtonUI(command, false)
+                            withContext(Dispatchers.Main) {
+                                updateButtonUI(command, false)
+                            }
                         } catch (e: Exception) {
-                            showToast("Lỗi: ${e.message}")
+                            withContext(Dispatchers.Main) {
+                                showToast("Reset error: ${e.message}")
+                            }
+                        } finally {
+                            isDownProcessed = false
                         }
                     }
                     true
@@ -67,40 +75,40 @@ object ButtonStateHandler {
     }
 
     /**
-     * Thiết lập nút theo dạng "nhấn giữ trạng thái" (toggle button):
-     * Mỗi lần nhấn sẽ đảo trạng thái của nút từ active -> inactive hoặc ngược lại.
-     *
-     * @param button Nút ImageButton cần xử lý.
-     * @param command Command ứng với nút.
-     * @param modbusManager Đối tượng quản lý giao tiếp Modbus.
-     * @param getCurrentState Hàm callback trả về trạng thái hiện tại của nút (true nếu đang active).
-     * @param updateButtonUI Hàm callback cập nhật lại giao diện nút theo trạng thái (true/false).
-     * @param showToast Hàm callback hiển thị thông báo lỗi.
-     * @param canExecuteCommand Hàm callback kiểm tra điều kiện cho phép thực hiện lệnh.
+     * Toggle button: each click flips between active/inactive.
      */
     fun setupToggleButton(
         button: ImageButton,
         command: ModbusCommand,
         modbusManager: ModbusManager,
         getCurrentState: () -> Boolean,
-        updateButtonUI: (command: ModbusCommand, active: Boolean) -> Unit,
-        showToast: (message: String) -> Unit,
+        updateButtonUI: (ModbusCommand, Boolean) -> Unit,
+        showToast: (String) -> Unit,
         canExecuteCommand: () -> Boolean
     ) {
+        var isProcessing = false
+
         button.setOnClickListener {
-            if (!canExecuteCommand()) {
-                showToast("Đang xử lý lệnh khác, vui lòng chờ...")
+            if (isProcessing || !canExecuteCommand()) {
+                if (!canExecuteCommand()) showToast("System busy, please wait…")
                 return@setOnClickListener
             }
-            val currentState = getCurrentState()
-            val newState = !currentState  // Đảo trạng thái
-            CoroutineScope(Dispatchers.Main).launch {
+            isProcessing = true
+            val newState = !getCurrentState()
+            scope.launch(Dispatchers.IO) {
                 try {
-                    val commandValue = if (newState) 1 else 0
-                    modbusManager.writeCommand(command.address, commandValue)
-                    updateButtonUI(command, newState)
+                    modbusManager.writeCommand(command.address, if (newState) 1 else 0)
+                    withContext(Dispatchers.Main) {
+                        updateButtonUI(command, newState)
+                    }
                 } catch (e: Exception) {
-                    showToast("Lỗi: ${e.message}")
+                    withContext(Dispatchers.Main) {
+                        showToast("Error: ${e.message}")
+                        // rollback UI
+                        updateButtonUI(command, !newState)
+                    }
+                } finally {
+                    isProcessing = false
                 }
             }
         }

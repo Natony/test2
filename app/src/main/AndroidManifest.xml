@@ -24,13 +24,6 @@
             </intent-filter>
         </activity>
 
-        <!-- ConfigActivity để cấu hình PLC -->
-        <activity
-            android:name=".ConfigActivity"
-            android:exported="true"
-            android:label="Cấu hình PLC"
-            android:theme="@style/Theme.Test2" />
-
         <!-- MainActivity hiển thị giao diện chính -->
         <activity
             android:name=".MainActivity"

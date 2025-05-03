@@ -1,4 +1,4 @@
-package com.example.test2
+    package com.example.test2
 
 enum class ModbusCommand(val address: Int) {
     POWER(1),

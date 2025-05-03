@@ -1,19 +1,26 @@
-package com.example.test2
+package com.example.test2.ui.config
 
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.test2.ConfigAdapter
+import com.example.test2.ConfigItem
+import com.example.test2.MainActivity
+import com.example.test2.R
+import com.example.test2.ui.control.ControlFragment
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
-class ConfigActivity : ComponentActivity() {
+class ConfigFragment : Fragment(R.layout.activity_config) {
     private lateinit var etDeviceName: EditText
     private lateinit var etPLCAddress: EditText
     private lateinit var etPLCPort: EditText
@@ -26,32 +33,29 @@ class ConfigActivity : ComponentActivity() {
     private val gson = Gson()
     private var addressList = mutableListOf<ConfigItem>()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_config)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        // Hide app title bar
+        (requireActivity() as AppCompatActivity).supportActionBar?.hide()
 
-        etDeviceName = findViewById(R.id.etDeviceName)
-        etPLCAddress = findViewById(R.id.etPLCAddress)
-        etPLCPort = findViewById(R.id.etPLCPort)
-        btnSave = findViewById(R.id.btnSave)
-        rvAddresses = findViewById(R.id.rvAddresses)
+        etDeviceName  = view.findViewById(R.id.etDeviceName)
+        etPLCAddress = view.findViewById(R.id.etPLCAddress)
+        etPLCPort    = view.findViewById(R.id.etPLCPort)
+        btnSave      = view.findViewById(R.id.btnSave)
+        rvAddresses  = view.findViewById(R.id.rvAddresses)
 
-        rvAddresses.layoutManager = LinearLayoutManager(this)
+        rvAddresses.layoutManager = LinearLayoutManager(requireContext())
         adapter = ConfigAdapter(
             onItemClick = { selected ->
-                val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                val prefs = requireActivity().getSharedPreferences(prefsName, Context.MODE_PRIVATE)
                 prefs.edit()
                     .putString("modbus_ip", selected.ipAddress)
                     .putInt   ("modbus_port", selected.port)
                     .putString("plc_name", selected.name)
                     .apply()
 
-                // Launch MainActivity and clear back stack
-                Intent(this, MainActivity::class.java).also {
-                    it.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                    startActivity(it)
-                }
-                finish()
+                // Switch to ControlFragment within MainActivity
+                (requireActivity() as MainActivity).openFragment(ControlFragment())
             },
             onEditClick = { item -> showEditDialog(item) },
             onDeleteClick = { item ->
@@ -67,19 +71,16 @@ class ConfigActivity : ComponentActivity() {
 
         btnSave.setOnClickListener {
             val name = etDeviceName.text.toString().trim()
-            val ip = etPLCAddress.text.toString().trim()
-            val portStr = etPLCPort.text.toString().trim()
-            if (name.isEmpty() || ip.isEmpty() || portStr.isEmpty()) {
-                Toast.makeText(this, "Vui lòng nhập đầy đủ thông tin", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            val port = portStr.toIntOrNull() ?: run {
-                Toast.makeText(this, "Cổng không hợp lệ", Toast.LENGTH_SHORT).show()
+            val ip   = etPLCAddress.text.toString().trim()
+            val port = etPLCPort.text.toString().trim().toIntOrNull()
+            if (name.isEmpty() || ip.isEmpty() || port == null) {
+                Toast.makeText(requireContext(), "Vui lòng nhập đầy đủ và đúng định dạng", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             addressList.add(ConfigItem(name, ip, port))
             saveAddresses()
             updateRecyclerView()
+            // after adding, list shows under button
             etDeviceName.text.clear()
             etPLCAddress.text.clear()
             etPLCPort.text.clear()
@@ -87,7 +88,7 @@ class ConfigActivity : ComponentActivity() {
     }
 
     private fun loadAddresses() {
-        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val prefs = requireActivity().getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         prefs.getString(addressesKey, null)?.let { json ->
             val type = object : TypeToken<MutableList<ConfigItem>>() {}.type
             addressList = gson.fromJson(json, type)
@@ -95,7 +96,7 @@ class ConfigActivity : ComponentActivity() {
     }
 
     private fun saveAddresses() {
-        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val prefs = requireActivity().getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         prefs.edit().putString(addressesKey, gson.toJson(addressList)).apply()
     }
 
@@ -112,20 +113,20 @@ class ConfigActivity : ComponentActivity() {
         etIp.setText(item.ipAddress)
         etPort.setText(item.port.toString())
 
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(requireContext())
             .setTitle("Chỉnh sửa thiết bị")
             .setView(dialogView)
             .setPositiveButton("Lưu") { _, _ ->
                 val newName = etName.text.toString().trim()
                 val newIp   = etIp.text.toString().trim()
-                val newPort = etPort.text.toString().trim().toIntOrNull()
+                val newPort = etPort.text.toString().toIntOrNull()
                 if (newName.isNotEmpty() && newIp.isNotEmpty() && newPort != null) {
                     val idx = addressList.indexOf(item)
                     addressList[idx] = ConfigItem(newName, newIp, newPort)
                     saveAddresses()
                     updateRecyclerView()
                 } else {
-                    Toast.makeText(this, "Dữ liệu không hợp lệ", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Dữ liệu không hợp lệ", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Hủy", null)
