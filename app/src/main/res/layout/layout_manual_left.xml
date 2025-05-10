@@ -4,23 +4,40 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center">
+    android:gravity="center"
+    android:paddingTop="50dp"
+    android:padding="10dp">
 
-    <ImageButton
-        android:id="@+id/btnManualForward"
-        android:layout_width="285dp"
-        android:layout_height="100dp"
-        android:adjustViewBounds="true"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_shuttle_forward_on"/>
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="130dp"
+        android:gravity="center_vertical"
+        android:padding="2dp">
+        <ImageButton
+            android:id="@+id/btnManualForward"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_shuttle_forward_on"
+            android:padding="2dp"/>
+    </LinearLayout>
 
-    <ImageButton
-        android:id="@+id/btnManualReverse"
-        android:layout_width="285dp"
-        android:layout_height="100dp"
-        android:adjustViewBounds="true"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_shuttle_reverse_on"/>
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="130dp"
+        android:gravity="center_vertical"
+        android:padding="2dp">
+        <ImageButton
+            android:id="@+id/btnManualReverse"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_shuttle_reverse_on"
+            android:padding="2dp"/>
+    </LinearLayout>
+
 </LinearLayout>

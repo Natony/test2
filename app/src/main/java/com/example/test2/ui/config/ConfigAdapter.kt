@@ -1,14 +1,15 @@
-    package com.example.test2
+package com.example.test2.ui.config
 
-    import android.view.LayoutInflater
+import android.view.LayoutInflater
     import android.view.View
     import android.view.ViewGroup
     import android.widget.ImageButton
     import android.widget.PopupMenu
     import android.widget.TextView
     import androidx.recyclerview.widget.RecyclerView
+import com.example.test2.R
 
-    class ConfigAdapter(
+class ConfigAdapter(
         private val onItemClick: (ConfigItem) -> Unit,
         private val onEditClick: (ConfigItem) -> Unit,
         private val onDeleteClick: (ConfigItem) -> Unit

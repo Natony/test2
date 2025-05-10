@@ -159,7 +159,7 @@
                     android:id="@+id/btnPosition"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:src="@drawable/ic_position_a"
+                    android:src="@drawable/ic_direction_a"
                     android:background="?android:attr/selectableItemBackgroundBorderless"
                     android:adjustViewBounds="true"
                     android:scaleType="fitCenter"

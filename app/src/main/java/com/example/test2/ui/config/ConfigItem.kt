@@ -1,4 +1,4 @@
-package com.example.test2
+package com.example.test2.ui.config
 
 data class ConfigItem(
     val name: String,

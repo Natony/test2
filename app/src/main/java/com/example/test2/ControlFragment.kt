@@ -2,8 +2,7 @@ package com.example.test2.ui.control
 
 import android.content.Context
 import android.os.Bundle
-import android.transition.AutoTransition
-import android.transition.TransitionManager
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,6 +20,9 @@ import com.example.test2.PlcErrorHandler
 import com.example.test2.ShuttlePositionIndicator
 import com.example.test2.ButtonStateHandler
 import com.example.test2.ModbusCommand
+import com.example.test2.OperationStatusManager
+import com.example.test2.AppConfigStatus
+import com.example.test2.rules.LockRuleConfig
 import kotlinx.coroutines.*
 
 class ControlFragment : Fragment() {
@@ -28,6 +30,7 @@ class ControlFragment : Fragment() {
     // region: Views
     private lateinit var tvNameDevice: TextView
     private lateinit var tvStatus: TextView
+    private lateinit var tvOperationStatus: TextView
 
     private lateinit var btnPower: ImageButton
     private lateinit var btnLock: ImageButton
@@ -42,6 +45,7 @@ class ControlFragment : Fragment() {
     private lateinit var layoutManualLeft: LinearLayout
     private lateinit var layoutAutoRight: LinearLayout
     private lateinit var layoutManualRight: LinearLayout
+    private lateinit var textCountPallet: TextView
     private lateinit var btnPickPallets: ImageButton
     private lateinit var btnPickPallet: ImageButton
     private lateinit var btnStackA: ImageButton
@@ -58,6 +62,7 @@ class ControlFragment : Fragment() {
     private lateinit var palletHandler: PalletCommandHandler
     private lateinit var shuttleIndicator: ShuttlePositionIndicator
     private val errorHandler = PlcErrorHandler()
+    private lateinit var statusManager: OperationStatusManager
 
     private val buttonLockStates = mutableMapOf<ModbusCommand, Boolean>()
     private val commandToButtonMap = mutableMapOf<ModbusCommand, ImageButton>()
@@ -79,7 +84,7 @@ class ControlFragment : Fragment() {
         ModbusCommand.POWER to ButtonState(ModbusCommand.POWER, activeResId = R.drawable.ic_power_on, inactiveResId = R.drawable.ic_power_off),
         ModbusCommand.LOCK to ButtonState(ModbusCommand.LOCK, activeResId = R.drawable.ic_lock_closed, inactiveResId = R.drawable.ic_lock_open),
         ModbusCommand.BUZZER to ButtonState(ModbusCommand.BUZZER, activeResId = R.drawable.ic_buzzer_on, inactiveResId = R.drawable.ic_buzzer_off),
-        ModbusCommand.POSITION to ButtonState(ModbusCommand.POSITION, activeResId = R.drawable.ic_position_a, inactiveResId = R.drawable.ic_position_b),
+        ModbusCommand.DIRECTION to ButtonState(ModbusCommand.DIRECTION, activeResId = R.drawable.ic_direction_a, inactiveResId = R.drawable.ic_direction_b),
         ModbusCommand.MODE to ButtonState(ModbusCommand.MODE, activeResId = R.drawable.ic_mode_auto, inactiveResId = R.drawable.ic_mode_manual),
         ModbusCommand.HANDLING to ButtonState(ModbusCommand.HANDLING, activeResId = R.drawable.ic_fifo, inactiveResId = R.drawable.ic_lifo),
         ModbusCommand.EMERGENCY_STOP to ButtonState(ModbusCommand.EMERGENCY_STOP, activeResId = R.drawable.ic_emergency_stop, inactiveResId = R.drawable.ic_emergency_stop),
@@ -104,6 +109,9 @@ class ControlFragment : Fragment() {
 
         // Khởi handler
         handler = ButtonStateHandler(viewLifecycleOwner.lifecycleScope)
+
+        // Khởi dynamic rules từ class riêng
+        handler.dynamicRules.addAll(LockRuleConfig.getRules())
 
         bindViews(view)
         initModbusAndIndicator(view)
@@ -144,13 +152,16 @@ class ControlFragment : Fragment() {
         layoutManualLeft  = root.findViewById(R.id.layoutManualLeft)
         layoutAutoRight   = root.findViewById(R.id.layoutAutoRight)
         layoutManualRight = root.findViewById(R.id.layoutManualRight)
+        textCountPallet = root.findViewById(R.id.textCountPallet)
+
+        tvOperationStatus = root.findViewById(R.id.tvOperationStatus)
 
         // Map commands → buttons
         listOf(
             btnPower to ModbusCommand.POWER,
             btnLock  to ModbusCommand.LOCK,
             btnBuzzer to ModbusCommand.BUZZER,
-            btnPosition to ModbusCommand.POSITION,
+            btnPosition to ModbusCommand.DIRECTION,
             btnMode to ModbusCommand.MODE,
             btnHandlingMode to ModbusCommand.HANDLING,
             btnEmergencyStop to ModbusCommand.EMERGENCY_STOP,
@@ -165,12 +176,16 @@ class ControlFragment : Fragment() {
             btnManualReverse to ModbusCommand.REVERSE,
             btnManualUp to ModbusCommand.UP,
             btnManualDown to ModbusCommand.DOWN
-        ).forEach { (btn, cmd) -> commandToButtonMap[cmd] = btn }
+        ).forEach { (btn, cmd) ->
+            commandToButtonMap[cmd] = btn
+            buttonLockStates[cmd] = false
+        }
 
         initButtonLockStates()
     }
 
     private fun initModbusAndIndicator(root: View) {
+
         val prefs = requireContext()
             .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         modbusManager = ModbusManager(
@@ -178,11 +193,16 @@ class ControlFragment : Fragment() {
             prefs.getString("modbus_ip","")!!,
             prefs.getInt("modbus_port",502)
         )
+
         palletHandler = PalletCommandHandler(
             requireContext(),
             modbusManager,
             ::canExecuteCommand
         )
+
+        statusManager = OperationStatusManager(modbusManager, AppConfigStatus.operationStatusConfig)
+        statusManager.bindTextView(tvOperationStatus)
+        statusManager.startMonitoring()
 
         // Danh sách 13 vị trí
         val icons = listOf(
@@ -250,19 +270,21 @@ class ControlFragment : Fragment() {
     private fun setupListeners() {
         // Toggle buttons (all except momentary)
         commandToButtonMap.filterKeys {
-            it !in listOf(ModbusCommand.FORWARD,ModbusCommand.REVERSE,ModbusCommand.UP,ModbusCommand.DOWN)
+            it !in listOf(ModbusCommand.FORWARD, ModbusCommand.REVERSE, ModbusCommand.UP, ModbusCommand.DOWN)
         }.forEach { (cmd, btn) ->
             handler.setupToggleButton(
-                button          = btn,
-                command         = cmd,
-                modbusManager   = modbusManager,
-                getCurrentState = { buttonStates[cmd]?.isActive ?: false },
-                updateButtonUI  = { c, active ->
+                button            = btn,
+                command           = cmd,
+                modbusManager     = modbusManager,
+                getCurrentState   = { buttonStates[cmd]?.isActive ?: false },
+                updateButtonUI    = { c, active ->
                     buttonStates[c]?.isActive = active
                     updateButtonUI(c)
                 },
-                showToast       = ::showToast,
-                canExecuteCommand = ::canExecuteCommand
+                showToast         = ::showToast,
+                canExecuteCommand = ::canExecuteCommand,
+                context           = requireContext(),
+                confirmMessage    = "Bạn có chắc muốn thực hiện ${cmd.name.toLowerCase().replace('_', ' ')} không?"
             )
         }
 
@@ -311,10 +333,23 @@ class ControlFragment : Fragment() {
 
     private fun startPolling() {
         pollingJob = lifecycleScope.launch(Dispatchers.Main) {
+            Log.d("ControlFragment", "Starting polling with operation status address: ${ModbusCommand.OPERATION_STATUS.address}")
+
             modbusManager.startPolling { result ->
                 when (result) {
-                    is ModbusManager.ModbusResult.Success ->
-                        requireActivity().runOnUiThread { updateUI(result.response) }
+                    is ModbusManager.ModbusResult.Success -> {
+                        requireActivity().runOnUiThread {
+                            updateUI(result.response)
+
+                            // Thêm log để debug
+                            try {
+                                val statusValue = result.response.getRegisterValue(ModbusCommand.OPERATION_STATUS.address - 1)
+                                Log.d("ControlFragment", "Operation Status Register Value: $statusValue")
+                            } catch (e: Exception) {
+                                Log.e("ControlFragment", "Error reading operation status: ${e.message}")
+                            }
+                        }
+                    }
                     is ModbusManager.ModbusResult.Error ->
                         requireActivity().runOnUiThread { showToast(result.message) }
                 }
@@ -329,7 +364,8 @@ class ControlFragment : Fragment() {
             updateButtonUI(cmd)
         }
         // Cross-lock
-        applyCrossLocking()
+        handler.applyCrossLocking(response, buttonLockStates)
+        updateButtonEnableStates()
         // Shuttle indicator
         val pos = response.getRegisterValue(ModbusCommand.LOCATION.address -1).coerceIn(1,13)
         shuttleIndicator.update(pos)
@@ -338,28 +374,6 @@ class ControlFragment : Fragment() {
 
     private fun initButtonLockStates() {
         ModbusCommand.values().forEach { buttonLockStates[it] = false }
-    }
-
-    private fun applyCrossLocking() {
-        // 1) Emergency
-        if (errorHandler.emergencyActive) {
-            buttonLockStates.keys.forEach { buttonLockStates[it] = it != ModbusCommand.EMERGENCY_STOP }
-            updateButtonEnableStates()
-            return
-        }
-        // 2) Special always open
-        val special = setOf(ModbusCommand.MODE, ModbusCommand.POWER, ModbusCommand.EMERGENCY_STOP)
-        // 3) Active funcs
-        val active = buttonStates.filter { (c,s) -> c !in special && s.isActive }.keys
-        val lockOthers = active.size==1
-        buttonLockStates.forEach { (c,_) ->
-            buttonLockStates[c] = when {
-                c in special -> false
-                lockOthers && c !in active -> true
-                else -> false
-            }
-        }
-        updateButtonEnableStates()
     }
 
     private fun updateButtonEnableStates() {
@@ -384,6 +398,9 @@ class ControlFragment : Fragment() {
         layoutManualLeft.visibility = if (!auto) View.VISIBLE else View.GONE
         layoutAutoRight.visibility  = if (auto) View.VISIBLE else View.GONE
         layoutManualRight.visibility= if (!auto) View.VISIBLE else View.GONE
+
+        btnCountPallet.visibility = if(auto) View.VISIBLE else View.GONE
+        textCountPallet.visibility = if (auto) View.VISIBLE else View.GONE
     }
 
     private fun handleCommand(cmd: ModbusCommand) {

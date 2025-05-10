@@ -7,4 +7,32 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Status Colors -->
+    <color name="status_starting">#FFA500</color>          <!-- Khởi động -->
+    <color name="status_normal">#4CAF50</color>           <!-- Normal/good -->
+    <color name="status_warning">#FFC107</color>          <!-- Warning -->
+    <color name="status_emergency">#F44336</color>        <!-- Emergency stop -->
+
+    <!-- Detailed Operation Status Colors -->
+    <color name="status_power">#FF5722</color>            <!-- POWER -->
+    <color name="status_lock">#4CAF50</color>             <!-- LOCK -->
+    <color name="status_buzzer">#FFC107</color>           <!-- BUZZER -->
+    <color name="status_direction">#2196F3</color>        <!-- DIRECTION -->
+    <color name="status_mode">#9C27B0</color>             <!-- MODE -->
+    <color name="status_handling">#795548</color>         <!-- HANDLING -->
+    <color name="status_emergency_stop">#F44336</color>   <!-- EMERGENCY_STOP -->
+    <color name="status_count_pallet">#009688</color>     <!-- COUNT_PALLET -->
+    <color name="status_pick_pallets">#3F51B5</color>     <!-- PICK_PALLETS -->
+    <color name="status_pick_pallet">#3F51B5</color>      <!-- PICK_PALLET -->
+    <color name="status_stack_a">#607D8B</color>          <!-- STACK_A -->
+    <color name="status_take_pallets">#00BCD4</color>     <!-- TAKE_PALLETS -->
+    <color name="status_take_pallet">#00BCD4</color>      <!-- TAKE_PALLET -->
+    <color name="status_stack_b">#607D8B</color>          <!-- STACK_B -->
+    <color name="status_forward">#8BC34A</color>         <!-- FORWARD -->
+    <color name="status_reverse">#CDDC39</color>         <!-- REVERSE -->
+    <color name="status_up">#009688</color>              <!-- UP -->
+    <color name="status_down">#009688</color>            <!-- DOWN -->
+    <color name="status_location">#3F51B5</color>        <!-- LOCATION -->
+    <color name="status_operation_status">#795548</color> <!-- OPERATION_STATUS -->
 </resources>
