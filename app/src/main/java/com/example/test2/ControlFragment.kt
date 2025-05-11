@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 import net.wimpi.modbus.msg.ReadMultipleRegistersResponse
 import com.example.test2.R
 import com.example.test2.ModbusManager
+import com.example.test2.ModbusConnectionManager
 import com.example.test2.PalletCommandHandler
 import com.example.test2.PlcErrorHandler
 import com.example.test2.ShuttlePositionIndicator
@@ -58,7 +60,10 @@ class ControlFragment : Fragment() {
     private lateinit var btnManualDown: ImageButton
     // endregion
 
-    private lateinit var modbusManager: ModbusManager
+    // Reference to the shared connection manager
+    private lateinit var connectionManager: ModbusConnectionManager
+    private var modbusManager: ModbusManager? = null
+
     private lateinit var palletHandler: PalletCommandHandler
     private lateinit var shuttleIndicator: ShuttlePositionIndicator
     private val errorHandler = PlcErrorHandler()
@@ -107,6 +112,9 @@ class ControlFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Get the shared connection manager
+        connectionManager = ModbusConnectionManager.getInstance(requireContext())
+
         // Khởi handler
         handler = ButtonStateHandler(viewLifecycleOwner.lifecycleScope)
 
@@ -114,13 +122,51 @@ class ControlFragment : Fragment() {
         handler.dynamicRules.addAll(LockRuleConfig.getRules())
 
         bindViews(view)
-        initModbusAndIndicator(view)
         setupUI()
-        setupListeners()
 
-        // Mở kết nối tự động và chuyển mode
-        connect()
-        toggleUIMode()
+        // Observe connection changes
+        connectionManager.connectionStatus.observe(viewLifecycleOwner, Observer { status ->
+            when (status) {
+                ModbusConnectionManager.ConnectionStatus.Connected -> {
+                    modbusManager = connectionManager.getModbusManager()
+                    isConnected = true
+                    updateConnectionUI(true)
+                    initModbusAndIndicator(view)
+                    setupListeners()
+                    startPolling()
+                    toggleUIMode()
+                }
+                ModbusConnectionManager.ConnectionStatus.Disconnected,
+                ModbusConnectionManager.ConnectionStatus.Error -> {
+                    modbusManager = null
+                    isConnected = false
+                    updateConnectionUI(false)
+                    pollingJob?.cancel()
+                }
+                else -> { /* Do nothing for other states */ }
+            }
+        })
+
+        // Current device info
+        connectionManager.currentDevice.observe(viewLifecycleOwner, Observer { device ->
+            device?.let {
+                tvNameDevice.text = it.name
+            }
+        })
+
+        // Try to use existing connection or establish a new one
+        if (connectionManager.isConnected()) {
+            modbusManager = connectionManager.getModbusManager()
+            isConnected = true
+            updateConnectionUI(true)
+            initModbusAndIndicator(view)
+            setupListeners()
+            startPolling()
+            toggleUIMode()
+        } else {
+            // Try to connect to the last selected device
+            connectionManager.connectToSelectedDevice(lifecycleScope)
+        }
     }
 
     private fun bindViews(root: View) {
@@ -185,22 +231,16 @@ class ControlFragment : Fragment() {
     }
 
     private fun initModbusAndIndicator(root: View) {
-
-        val prefs = requireContext()
-            .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
-        modbusManager = ModbusManager(
-            requireContext(),
-            prefs.getString("modbus_ip","")!!,
-            prefs.getInt("modbus_port",502)
-        )
+        // Use the ModbusManager from the connection manager
+        modbusManager = connectionManager.getModbusManager() ?: return
 
         palletHandler = PalletCommandHandler(
             requireContext(),
-            modbusManager,
+            modbusManager!!,
             ::canExecuteCommand
         )
 
-        statusManager = OperationStatusManager(modbusManager, AppConfigStatus.operationStatusConfig)
+        statusManager = OperationStatusManager(modbusManager!!, AppConfigStatus.operationStatusConfig)
         statusManager.bindTextView(tvOperationStatus)
         statusManager.startMonitoring()
 
@@ -261,13 +301,22 @@ class ControlFragment : Fragment() {
     }
 
     private fun setupUI() {
-        val prefs = requireContext()
-            .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
-        tvNameDevice.text = prefs.getString("plc_name","PLC")
-        updateConnectionUI(false)
+        // Get device name from connection manager if available
+        connectionManager.currentDevice.value?.let {
+            tvNameDevice.text = it.name
+        } ?: run {
+            // Fallback to SharedPreferences
+            val prefs = requireContext().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+            tvNameDevice.text = prefs.getString("plc_name", "PLC")
+        }
+
+        updateConnectionUI(connectionManager.isConnected())
     }
 
     private fun setupListeners() {
+        // Skip if ModbusManager is not available
+        val modbus = modbusManager ?: return
+
         // Toggle buttons (all except momentary)
         commandToButtonMap.filterKeys {
             it !in listOf(ModbusCommand.FORWARD, ModbusCommand.REVERSE, ModbusCommand.UP, ModbusCommand.DOWN)
@@ -275,7 +324,7 @@ class ControlFragment : Fragment() {
             handler.setupToggleButton(
                 button            = btn,
                 command           = cmd,
-                modbusManager     = modbusManager,
+                modbusManager     = modbus,
                 getCurrentState   = { buttonStates[cmd]?.isActive ?: false },
                 updateButtonUI    = { c, active ->
                     buttonStates[c]?.isActive = active
@@ -289,11 +338,11 @@ class ControlFragment : Fragment() {
         }
 
         // Momentary buttons
-        listOf(ModbusCommand.FORWARD,ModbusCommand.REVERSE,ModbusCommand.UP,ModbusCommand.DOWN).forEach { cmd ->
+        listOf(ModbusCommand.FORWARD, ModbusCommand.REVERSE, ModbusCommand.UP, ModbusCommand.DOWN).forEach { cmd ->
             handler.setupMomentaryButton(
                 button         = commandToButtonMap[cmd]!!,
                 command        = cmd,
-                modbusManager  = modbusManager,
+                modbusManager  = modbus,
                 updateButtonUI = { c, active ->
                     buttonStates[c]?.isActive = active
                     updateButtonUI(c)
@@ -312,30 +361,14 @@ class ControlFragment : Fragment() {
         }
     }
 
-    private fun connect() {
-        pollingJob?.cancel()
-        lifecycleScope.launch(Dispatchers.Main) {
-            val ok = modbusManager.connect()
-            if (ok) {
-                isConnected = true
-                updateConnectionUI(true)
-                startPolling()
-            } else showToast("Kết nối thất bại")
-        }
-    }
-
-    private fun disconnect() {
-        pollingJob?.cancel()
-        modbusManager.disconnect()
-        isConnected = false
-        updateConnectionUI(false)
-    }
-
     private fun startPolling() {
+        val modbus = modbusManager ?: return
+
+        pollingJob?.cancel()
         pollingJob = lifecycleScope.launch(Dispatchers.Main) {
             Log.d("ControlFragment", "Starting polling with operation status address: ${ModbusCommand.OPERATION_STATUS.address}")
 
-            modbusManager.startPolling { result ->
+            modbus.startPolling { result ->
                 when (result) {
                     is ModbusManager.ModbusResult.Success -> {
                         requireActivity().runOnUiThread {
@@ -404,15 +437,18 @@ class ControlFragment : Fragment() {
     }
 
     private fun handleCommand(cmd: ModbusCommand) {
+        val modbus = modbusManager ?: return
+
         if (!canExecuteCommand()) {
             showToast("Đang xử lý lệnh khác…")
             return
         }
+
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val state = buttonStates[cmd]!!
                 val newVal = if (state.isActive) 0 else 1
-                modbusManager.writeCommand(cmd.address, newVal)
+                modbus.writeCommand(cmd.address, newVal)
                 withContext(Dispatchers.Main) {
                     state.isActive = !state.isActive
                     updateButtonUI(cmd)
@@ -425,12 +461,17 @@ class ControlFragment : Fragment() {
         }
     }
 
-    private fun canExecuteCommand() = isConnected && !modbusManager.isBusy
-    private fun showToast(msg:String) = Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+    private fun canExecuteCommand(): Boolean {
+        val modbus = modbusManager ?: return false
+        return isConnected && !modbus.isBusy
+    }
+
+    private fun showToast(msg: String) = Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
 
     override fun onDestroyView() {
         super.onDestroyView()
         pollingJob?.cancel()
-        if (isConnected) modbusManager.disconnect()
+        // Do not disconnect here as we're using the shared connection manager
+        // It will manage the connection lifecycle for the entire app
     }
 }

@@ -9,13 +9,16 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.test2.MainActivity
+import com.example.test2.ModbusConnectionManager
 import com.example.test2.R
 import com.example.test2.ui.control.ControlFragment
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import androidx.lifecycle.lifecycleScope
 
 class ConfigFragment : Fragment(R.layout.activity_config) {
     private lateinit var etDeviceName: EditText
@@ -30,10 +33,16 @@ class ConfigFragment : Fragment(R.layout.activity_config) {
     private val gson = Gson()
     private var addressList = mutableListOf<ConfigItem>()
 
+    // Reference to the connection manager
+    private lateinit var connectionManager: ModbusConnectionManager
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         // Hide app title bar
         (requireActivity() as AppCompatActivity).supportActionBar?.hide()
+
+        // Get the connection manager instance
+        connectionManager = ModbusConnectionManager.getInstance(requireContext())
 
         etDeviceName  = view.findViewById(R.id.etDeviceName)
         etPLCAddress = view.findViewById(R.id.etPLCAddress)
@@ -44,6 +53,7 @@ class ConfigFragment : Fragment(R.layout.activity_config) {
         rvAddresses.layoutManager = LinearLayoutManager(requireContext())
         adapter = ConfigAdapter(
             onItemClick = { selected ->
+                // Store selected device in SharedPreferences
                 val prefs = requireActivity().getSharedPreferences(prefsName, Context.MODE_PRIVATE)
                 prefs.edit()
                     .putString("modbus_ip", selected.ipAddress)
@@ -51,8 +61,25 @@ class ConfigFragment : Fragment(R.layout.activity_config) {
                     .putString("plc_name", selected.name)
                     .apply()
 
-                // Switch to ControlFragment within MainActivity
-                (requireActivity() as MainActivity).openFragment(ControlFragment())
+                // Connect to the selected device
+                connectionManager.connectToDevice(selected, lifecycleScope)
+
+                // Observe connection status changes
+                connectionManager.connectionStatus.observe(viewLifecycleOwner, Observer { status ->
+                    when (status) {
+                        ModbusConnectionManager.ConnectionStatus.Connected -> {
+                            Toast.makeText(requireContext(), "Kết nối thành công với ${selected.name}", Toast.LENGTH_SHORT).show()
+                            // Switch to ControlFragment within MainActivity
+                            (requireActivity() as MainActivity).openFragment(ControlFragment())
+                        }
+                        ModbusConnectionManager.ConnectionStatus.Error -> {
+                            Toast.makeText(requireContext(), "Không thể kết nối đến ${selected.name}", Toast.LENGTH_SHORT).show()
+                        }
+                        else -> {
+                            // Do nothing for other states
+                        }
+                    }
+                })
             },
             onEditClick = { item -> showEditDialog(item) },
             onDeleteClick = { item ->
