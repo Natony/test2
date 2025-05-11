@@ -144,7 +144,7 @@ class AlarmFragment : Fragment(), AlarmAdapter.AlarmAdapterListener {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Nothing special needed here, ViewModel will be cleared automatically
+        viewModel.pauseConnection()
     }
 
     override fun onDestroy() {

@@ -92,6 +92,24 @@ class AlarmManager(
         }
     }
 
+    fun pauseConnection() {
+        try {
+            // Hủy đăng ký callbacks tạm thời
+            alarmRegisters.keys.forEach { registerAddress ->
+                modbusManager.unregisterPollingCallback(registerAddress)
+            }
+
+            // Đóng kết nối Modbus
+            modbusManager.disconnect()
+
+            // Cập nhật trạng thái kết nối
+            _connectionStatus.value = false
+
+            Log.d("AlarmManager", "Connection paused")
+        } catch (e: Exception) {
+            Log.e("AlarmManager", "Error during connection pause: ${e.message}")
+        }
+    }
     /**
      * Process an alarm value from a register
      */
