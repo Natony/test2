@@ -1,6 +1,7 @@
 package com.example.test2.ui.alarm
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -18,8 +19,17 @@ import kotlinx.coroutines.launch
  */
 class AlarmViewModel(private val context: Context) : ViewModel() {
 
-    // Initialize ModbusManager with IP from settings (could be from SharedPreferences)
-    private val modbusManager = ModbusManager(context, "192.168.1.100")
+    // Lấy thông tin từ SharedPreferences thay vì sử dụng địa chỉ cố định
+    private val modbusManager: ModbusManager by lazy {
+        val prefs = context.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+        val ip = prefs.getString("modbus_ip", "192.168.1.100") ?: "192.168.1.100"
+        val port = prefs.getInt("modbus_port", 502) // 502 là cổng Modbus TCP mặc định
+
+        // Log để debug
+        Log.d("AlarmViewModel", "Connecting to Modbus device at IP: $ip, port: $port")
+
+        ModbusManager(context, ip, port) // Giả sử ModbusManager có constructor nhận port
+    }
 
     // Initialize AlarmManager
     private val alarmManager = AlarmManager(context, modbusManager)
