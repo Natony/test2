@@ -6,26 +6,32 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
+import com.example.test2.AppConfigStatus
+import com.example.test2.ButtonStateHandler
+import com.example.test2.MainActivity
+import com.example.test2.ModbusCommand
+import com.example.test2.ModbusConnectionManager
+import com.example.test2.ModbusManager
+import com.example.test2.OperationStatusManager
+import com.example.test2.ui.modbus.ModbusViewModel
+import com.example.test2.PalletCommandHandler
+import com.example.test2.PlcErrorHandler
+import com.example.test2.R
+import com.example.test2.ShuttlePositionIndicator
+import com.example.test2.rules.LockRuleConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.wimpi.modbus.msg.ReadMultipleRegistersResponse
-import com.example.test2.R
-import com.example.test2.ModbusManager
-import com.example.test2.ModbusConnectionManager
-import com.example.test2.PalletCommandHandler
-import com.example.test2.PlcErrorHandler
-import com.example.test2.ShuttlePositionIndicator
-import com.example.test2.ButtonStateHandler
-import com.example.test2.ModbusCommand
-import com.example.test2.OperationStatusManager
-import com.example.test2.AppConfigStatus
-import com.example.test2.rules.LockRuleConfig
-import kotlinx.coroutines.*
 
 class ControlFragment : Fragment() {
 
@@ -68,6 +74,7 @@ class ControlFragment : Fragment() {
     private lateinit var shuttleIndicator: ShuttlePositionIndicator
     private val errorHandler = PlcErrorHandler()
     private lateinit var statusManager: OperationStatusManager
+    private lateinit var modbusViewModel: ModbusViewModel
 
     private val buttonLockStates = mutableMapOf<ModbusCommand, Boolean>()
     private val commandToButtonMap = mutableMapOf<ModbusCommand, ImageButton>()
@@ -115,6 +122,9 @@ class ControlFragment : Fragment() {
         // Get the shared connection manager
         connectionManager = ModbusConnectionManager.getInstance(requireContext())
 
+        // Lấy modbusViewModel từ MainActivity
+        modbusViewModel = (requireActivity() as MainActivity).modbusViewModel
+
         // Khởi handler
         handler = ButtonStateHandler(viewLifecycleOwner.lifecycleScope)
 
@@ -124,49 +134,40 @@ class ControlFragment : Fragment() {
         bindViews(view)
         setupUI()
 
-        // Observe connection changes
+        // Observe dữ liệu từ ViewModel
+        modbusViewModel.modbusData.observe(viewLifecycleOwner, Observer { result ->
+            when (result) {
+                is ModbusManager.ModbusResult.Success -> {
+                    updateUI(result.response)
+                }
+                is ModbusManager.ModbusResult.Error -> {
+                    showToast(result.message)
+                }
+            }
+        })
+
         connectionManager.connectionStatus.observe(viewLifecycleOwner, Observer { status ->
             when (status) {
                 ModbusConnectionManager.ConnectionStatus.Connected -> {
                     modbusManager = connectionManager.getModbusManager()
-                    isConnected = true
                     updateConnectionUI(true)
                     initModbusAndIndicator(view)
+                    isConnected = true
                     setupListeners()
-                    startPolling()
-                    toggleUIMode()
                 }
-                ModbusConnectionManager.ConnectionStatus.Disconnected,
-                ModbusConnectionManager.ConnectionStatus.Error -> {
+                else -> {
                     modbusManager = null
                     isConnected = false
                     updateConnectionUI(false)
-                    pollingJob?.cancel()
                 }
-                else -> { /* Do nothing for other states */ }
             }
         })
 
-        // Current device info
         connectionManager.currentDevice.observe(viewLifecycleOwner, Observer { device ->
-            device?.let {
-                tvNameDevice.text = it.name
-            }
+            device?.let { tvNameDevice.text = it.name }
         })
 
-        // Try to use existing connection or establish a new one
-        if (connectionManager.isConnected()) {
-            modbusManager = connectionManager.getModbusManager()
-            isConnected = true
-            updateConnectionUI(true)
-            initModbusAndIndicator(view)
-            setupListeners()
-            startPolling()
-            toggleUIMode()
-        } else {
-            // Try to connect to the last selected device
-            connectionManager.connectToSelectedDevice(lifecycleScope)
-        }
+
     }
 
     private fun bindViews(root: View) {
@@ -240,7 +241,8 @@ class ControlFragment : Fragment() {
             ::canExecuteCommand
         )
 
-        statusManager = OperationStatusManager(modbusManager!!, AppConfigStatus.operationStatusConfig)
+        statusManager =
+            OperationStatusManager(modbusManager!!, AppConfigStatus.operationStatusConfig)
         statusManager.bindTextView(tvOperationStatus)
         statusManager.startMonitoring()
 

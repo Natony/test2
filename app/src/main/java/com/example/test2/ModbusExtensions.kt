@@ -1,4 +1,4 @@
-package com.example.test2
+package com.example.test2.ui.modbus
 
 import android.widget.ImageButton
 import androidx.annotation.DrawableRes

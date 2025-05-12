@@ -8,12 +8,15 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import com.example.test2.ui.home.HomeFragment
 import com.example.test2.ui.alarm.AlarmFragment
 import com.example.test2.ui.control.ControlFragment
 import com.example.test2.ui.history.HistoryFragment
 import com.example.test2.ui.config.ConfigFragment
-
+import androidx.activity.viewModels
+import com.example.test2.ui.modbus.ModbusViewModel
+import com.example.test2.ui.modbus.ModbusViewModelFactory
 
 class MainActivity : AppCompatActivity() {
     private lateinit var btnHome: ImageButton
@@ -21,6 +24,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnConfig: ImageButton
     private lateinit var btnControl: ImageButton
     private lateinit var btnHistory: ImageButton
+
+    val modbusViewModel: ModbusViewModel by viewModels {
+        ModbusViewModelFactory(applicationContext)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
