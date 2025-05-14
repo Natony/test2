@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">test2</string>
+    <string-array name="function_list">
+        <item>Chạy không tải</item>
+        <item>Di chuyển pallet</item>
+        <item>Sạc shuttle</item>
+        <!-- Thêm các mục khác nếu cần -->
+    </string-array>
 </resources>

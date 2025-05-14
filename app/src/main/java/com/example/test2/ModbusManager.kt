@@ -119,8 +119,8 @@ class ModbusManager(private val context: Context, val ip: String, val port: Int 
                         }
                     }
 
-                    val response = readRegisters(0, 23)
-                    val errorRegisterIndex = 23
+                    val response = readRegisters(0, 40)
+                    val errorRegisterIndex = 40
                     if (response.wordCount > errorRegisterIndex) {
                         val errorCode = response.getRegisterValue(errorRegisterIndex)
                         if (errorCode == 8085) {

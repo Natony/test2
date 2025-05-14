@@ -6,9 +6,13 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -29,6 +33,8 @@ import com.example.test2.ShuttlePositionIndicator
 import com.example.test2.rules.LockRuleConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.wimpi.modbus.msg.ReadMultipleRegistersResponse
@@ -66,6 +72,21 @@ class ControlFragment : Fragment() {
     private lateinit var btnManualDown: ImageButton
     // endregion
 
+    private lateinit var icBattery: ImageView
+    private lateinit var tvBattery: TextView
+
+    private lateinit var spinnerFunctions: Spinner
+    private lateinit var etStartX: EditText
+    private lateinit var etStartY: EditText
+    private lateinit var etStartZ: EditText
+    private lateinit var etEndX: EditText
+    private lateinit var etEndY: EditText
+    private lateinit var etEndZ: EditText
+    private lateinit var tvActualX: TextView
+    private lateinit var tvActualY: TextView
+    private lateinit var tvActualZ: TextView
+    private lateinit var btnRunFunction: Button
+
     // Reference to the shared connection manager
     private lateinit var connectionManager: ModbusConnectionManager
     private var modbusManager: ModbusManager? = null
@@ -80,6 +101,9 @@ class ControlFragment : Fragment() {
     private val commandToButtonMap = mutableMapOf<ModbusCommand, ImageButton>()
     private var pollingJob: Job? = null
     private var isConnected = false
+
+    private var isIndicatorInitialized = false
+
 
     // Tạo instance của handler với lifecycleScope
     private lateinit var handler: ButtonStateHandler
@@ -146,18 +170,38 @@ class ControlFragment : Fragment() {
             }
         })
 
+        // Thiết lập spinner
+        spinnerFunctions.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+                val isCoordinateMode = position == 0 || position == 1 // "Chạy không tải" hoặc "Di chuyển pallet"
+                etStartX.isEnabled = isCoordinateMode
+                etStartY.isEnabled = isCoordinateMode
+                etStartZ.isEnabled = isCoordinateMode
+                etEndX.isEnabled = isCoordinateMode
+                etEndY.isEnabled = isCoordinateMode
+                etEndZ.isEnabled = isCoordinateMode
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                // Không làm gì
+            }
+        }
+
         connectionManager.connectionStatus.observe(viewLifecycleOwner, Observer { status ->
             when (status) {
                 ModbusConnectionManager.ConnectionStatus.Connected -> {
                     modbusManager = connectionManager.getModbusManager()
                     updateConnectionUI(true)
                     initModbusAndIndicator(view)
+                    isIndicatorInitialized = true
                     isConnected = true
                     setupListeners()
+                    setupBatteryMonitor()
                 }
                 else -> {
                     modbusManager = null
                     isConnected = false
+                    isIndicatorInitialized = true
                     updateConnectionUI(false)
                 }
             }
@@ -167,7 +211,7 @@ class ControlFragment : Fragment() {
             device?.let { tvNameDevice.text = it.name }
         })
 
-
+        setupRunButton()
     }
 
     private fun bindViews(root: View) {
@@ -202,6 +246,21 @@ class ControlFragment : Fragment() {
         textCountPallet = root.findViewById(R.id.textCountPallet)
 
         tvOperationStatus = root.findViewById(R.id.tvOperationStatus)
+
+        icBattery = root.findViewById(R.id.icBattery)
+        tvBattery = root.findViewById(R.id.tvBattery)
+
+        spinnerFunctions = root.findViewById(R.id.spinnerFunctions)
+        etStartX = root.findViewById(R.id.etStartX)
+        etStartY = root.findViewById(R.id.etStartY)
+        etStartZ = root.findViewById(R.id.etStartZ)
+        etEndX = root.findViewById(R.id.etEndX)
+        etEndY = root.findViewById(R.id.etEndY)
+        etEndZ = root.findViewById(R.id.etEndZ)
+        tvActualX = root.findViewById(R.id.tvActualX)
+        tvActualY = root.findViewById(R.id.tvActualY)
+        tvActualZ = root.findViewById(R.id.tvActualZ)
+        btnRunFunction = root.findViewById(R.id.btnRunFunction)
 
         // Map commands → buttons
         listOf(
@@ -300,6 +359,60 @@ class ControlFragment : Fragment() {
             root.findViewById(R.id.ivShuttle),
             root.findViewById(R.id.vBelt)
         )
+
+        isIndicatorInitialized = true
+    }
+
+    private fun setupCoordinatePolling() {
+        pollingJob = lifecycleScope.launch {
+            while (isActive) {
+                try {
+                    val actualX = modbusManager?.readRegister(ModbusCommand.ACTUAL_X.address)
+                    val actualY = modbusManager?.readRegister(ModbusCommand.ACTUAL_Y.address)
+                    val actualZ = modbusManager?.readRegister(ModbusCommand.ACTUAL_Z.address)
+                    withContext(Dispatchers.Main) {
+                        tvActualX.text = "Actual X: ${actualX ?: "N/A"}"
+                        tvActualY.text = "Actual Y: ${actualY ?: "N/A"}"
+                        tvActualZ.text = "Actual Z: ${actualZ ?: "N/A"}"
+                    }
+                } catch (e: Exception) {
+                    Log.e("ControlFragment", "Lỗi đọc tọa độ thực tế: ${e.message}")
+                }
+                delay(1000) // Cập nhật mỗi giây
+            }
+        }
+    }
+
+    private fun updateBatteryUI(batteryLevel: Int) {
+        // Update the battery icon based on level
+        val batteryIcon = when {
+            batteryLevel > 80 -> R.drawable.ic_battery_full
+            batteryLevel > 20 -> R.drawable.ic_battery_medium
+            else -> R.drawable.ic_battery_low
+        }
+
+        // Update the UI
+        icBattery.setImageResource(batteryIcon)
+        tvBattery.text = "$batteryLevel%"
+    }
+
+    private fun setupBatteryMonitor() {
+        val modbus = modbusManager ?: return
+
+        // Register a callback for the battery address
+        modbus.registerPollingCallback(ModbusCommand.BATTERY.address) { batteryLevel ->
+            // Update on the main thread
+            lifecycleScope.launch(Dispatchers.Main) {
+                updateBatteryUI(batteryLevel)
+            }
+        }
+    }
+
+    // Call this method in onViewCreated or when connection is established
+    private fun initBatteryMonitor() {
+        if (isConnected && modbusManager != null) {
+            setupBatteryMonitor()
+        }
     }
 
     private fun setupUI() {
@@ -363,35 +476,6 @@ class ControlFragment : Fragment() {
         }
     }
 
-    private fun startPolling() {
-        val modbus = modbusManager ?: return
-
-        pollingJob?.cancel()
-        pollingJob = lifecycleScope.launch(Dispatchers.Main) {
-            Log.d("ControlFragment", "Starting polling with operation status address: ${ModbusCommand.OPERATION_STATUS.address}")
-
-            modbus.startPolling { result ->
-                when (result) {
-                    is ModbusManager.ModbusResult.Success -> {
-                        requireActivity().runOnUiThread {
-                            updateUI(result.response)
-
-                            // Thêm log để debug
-                            try {
-                                val statusValue = result.response.getRegisterValue(ModbusCommand.OPERATION_STATUS.address - 1)
-                                Log.d("ControlFragment", "Operation Status Register Value: $statusValue")
-                            } catch (e: Exception) {
-                                Log.e("ControlFragment", "Error reading operation status: ${e.message}")
-                            }
-                        }
-                    }
-                    is ModbusManager.ModbusResult.Error ->
-                        requireActivity().runOnUiThread { showToast(result.message) }
-                }
-            }
-        }
-    }
-
     private fun updateUI(response: ReadMultipleRegistersResponse) {
         // Cập nhật toggle states
         buttonStates.forEach { (cmd, st) ->
@@ -402,8 +486,10 @@ class ControlFragment : Fragment() {
         handler.applyCrossLocking(response, buttonLockStates)
         updateButtonEnableStates()
         // Shuttle indicator
-        val pos = response.getRegisterValue(ModbusCommand.LOCATION.address -1).coerceIn(1,13)
-        shuttleIndicator.update(pos)
+        if (isIndicatorInitialized) {
+            val pos = response.getRegisterValue(ModbusCommand.LOCATION.address - 1).coerceIn(1, 13)
+            shuttleIndicator.update(pos)
+        }
         toggleUIMode()
     }
 
@@ -436,6 +522,91 @@ class ControlFragment : Fragment() {
 
         btnCountPallet.visibility = if(auto) View.VISIBLE else View.GONE
         textCountPallet.visibility = if (auto) View.VISIBLE else View.GONE
+    }
+
+    private fun setupRunButton() {
+        btnRunFunction.setOnClickListener {
+            if (!canExecuteCommand()) {
+                showToast("Đang xử lý lệnh khác…")
+                return@setOnClickListener
+            }
+
+            val selectedPosition = spinnerFunctions.selectedItemPosition
+            if (selectedPosition == 0 || selectedPosition == 1) { // "Chạy không tải" hoặc "Di chuyển pallet"
+                if (!validateCoordinates()) {
+                    showToast("Vui lòng nhập đầy đủ và đúng định dạng cho các tọa độ.")
+                    return@setOnClickListener
+                }
+            }
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    when (selectedPosition) {
+                        0, 1 -> { // "Chạy không tải" hoặc "Di chuyển pallet"
+                            val startX = etStartX.text.toString().toInt()
+                            val startY = etStartY.text.toString().toInt()
+                            val startZ = etStartZ.text.toString().toInt()
+                            val endX = etEndX.text.toString().toInt()
+                            val endY = etEndY.text.toString().toInt()
+                            val endZ = etEndZ.text.toString().toInt()
+
+                            modbusManager?.writeCommand(ModbusCommand.START_X.address, startX)
+                            modbusManager?.writeCommand(ModbusCommand.START_Y.address, startY)
+                            modbusManager?.writeCommand(ModbusCommand.START_Z.address, startZ)
+                            modbusManager?.writeCommand(ModbusCommand.END_X.address, endX)
+                            modbusManager?.writeCommand(ModbusCommand.END_Y.address, endY)
+                            modbusManager?.writeCommand(ModbusCommand.END_Z.address, endZ)
+                        }
+                        2 -> { // "Sạc shuttle"
+                            // Không cần gửi tọa độ
+                        }
+                    }
+
+                    val functionNumber = when (selectedPosition) {
+                        0 -> 2 // "Chạy không tải"
+                        1 -> 3 // "Di chuyển pallet"
+                        2 -> 1 // "Sạc shuttle"
+                        else -> 0
+                    }
+                    modbusManager?.writeCommand(ModbusCommand.FUNCTION_MODE.address, functionNumber)
+
+                    withContext(Dispatchers.Main) {
+                        showToast("Đã gửi lệnh thành công")
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        showToast("Lỗi: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun validateCoordinates(): Boolean {
+        val startX = etStartX.text.toString().trim()
+        val startY = etStartY.text.toString().trim()
+        val startZ = etStartZ.text.toString().trim()
+        val endX = etEndX.text.toString().trim()
+        val endY = etEndY.text.toString().trim()
+        val endZ = etEndZ.text.toString().trim()
+
+        if (startX.isEmpty() || startY.isEmpty() || startZ.isEmpty() ||
+            endX.isEmpty() || endY.isEmpty() || endZ.isEmpty()) {
+            return false
+        }
+
+        try {
+            startX.toInt()
+            startY.toInt()
+            startZ.toInt()
+            endX.toInt()
+            endY.toInt()
+            endZ.toInt()
+        } catch (e: NumberFormatException) {
+            return false
+        }
+
+        return true
     }
 
     private fun handleCommand(cmd: ModbusCommand) {
@@ -473,6 +644,7 @@ class ControlFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         pollingJob?.cancel()
+        isIndicatorInitialized = false
         // Do not disconnect here as we're using the shared connection manager
         // It will manage the connection lifecycle for the entire app
     }

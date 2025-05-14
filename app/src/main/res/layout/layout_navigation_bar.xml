@@ -15,14 +15,14 @@
         android:orientation="horizontal"
         android:padding="2dp">
 
-        <ImageButton
-            android:id="@+id/btnBack"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_back"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
+        <ImageView
+            android:layout_width="45dp"
+            android:layout_height="36dp"
             android:adjustViewBounds="true"
-            android:scaleType="fitCenter" />
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:scaleType="fitCenter"
+            android:src="@mipmap/logo" />
+
     </LinearLayout>
 
     <!-- RightBar căn sát phải -->
@@ -84,30 +84,6 @@
             android:padding="2dp"
             android:scaleType="fitCenter" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:padding="2dp">
-            <ImageView
-                android:id="@+id/icBattery"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_battery_full"
-                android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:adjustViewBounds="true"
-                android:padding="2dp"
-                android:scaleType="fitCenter" />
-            <TextView
-                android:id="@+id/tvBaterry"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="2dp"
-                android:textSize="14sp"
-                android:text="99%"
-                android:textStyle="bold"
-                android:scaleType="fitCenter" />
-        </LinearLayout>
     </LinearLayout>
 
 </RelativeLayout>

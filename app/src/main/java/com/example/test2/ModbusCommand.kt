@@ -17,8 +17,20 @@ enum class ModbusCommand(val address: Int) {
     REVERSE(14),
     UP(15),
     DOWN(16),
-    PICK_PALLETS(17),
-    TAKE_PALLETS(18),
-    LOCATION(19),
-    OPERATION_STATUS(20)
+    BATTERY(17),
+    PICK_PALLETS(18),
+    TAKE_PALLETS(19),
+    LOCATION(20),
+    OPERATION_STATUS(21),
+
+    START_X(25),
+    START_Y(26),
+    START_Z(27),
+    END_X(28),
+    END_Y(29),
+    END_Z(30),
+    ACTUAL_X(31),
+    ACTUAL_Y(32),
+    ACTUAL_Z(33),
+    FUNCTION_MODE(34)
 }
