@@ -22,6 +22,15 @@ class OperationStatusManager(
     private val pollingAddress = ModbusCommand.OPERATION_STATUS.address
     private val TAG = "OperationStatusManager"
 
+    // Callback để thông báo thay đổi trạng thái
+    private var statusUpdateCallback: ((OperationStatus) -> Unit)? = null
+
+    fun setStatusUpdateCallback(callback: (OperationStatus) -> Unit) {
+        this.statusUpdateCallback = callback
+        // Gửi trạng thái hiện tại nếu có
+        currentStatus?.let { callback(it) }
+    }
+
     fun bindTextView(view: TextView) {
         this.textView = view
         Log.d(TAG, "TextView bound: $view")
@@ -44,6 +53,9 @@ class OperationStatusManager(
             Log.d(TAG, "Status changed from ${currentStatus?.statusCode} to ${newStatus.statusCode}")
             currentStatus = newStatus
             updateDisplay()
+
+            // Gọi callback để thông báo thay đổi trạng thái
+            statusUpdateCallback?.invoke(newStatus)
         } else {
             Log.d(TAG, "Status unchanged")
         }
@@ -57,7 +69,6 @@ class OperationStatusManager(
                 status.iconResId?.let {
                     textView?.setCompoundDrawablesRelativeWithIntrinsicBounds(it, 0, 0, 0)
                 }
-                // The key change here - directly use the color value
                 textView?.setTextColor(status.textColor)
                 Log.d(TAG, "Display updated: text=${status.displayText}, color=${status.textColor}")
             }
@@ -68,4 +79,7 @@ class OperationStatusManager(
         Log.d(TAG, "Stopping monitoring")
         modbusManager.unregisterPollingCallback(pollingAddress)
     }
+
+    // Lấy trạng thái hiện tại
+    fun getCurrentStatus(): OperationStatus? = currentStatus
 }

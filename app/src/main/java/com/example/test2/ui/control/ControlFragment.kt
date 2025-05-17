@@ -29,6 +29,7 @@ import com.example.test2.ui.modbus.ModbusViewModel
 import com.example.test2.PalletCommandHandler
 import com.example.test2.PlcErrorHandler
 import com.example.test2.R
+import com.example.test2.ShuttleFunctionHandler
 import com.example.test2.ShuttlePositionIndicator
 import com.example.test2.rules.LockRuleConfig
 import kotlinx.coroutines.Dispatchers
@@ -47,11 +48,9 @@ class ControlFragment : Fragment() {
     private lateinit var tvOperationStatus: TextView
 
     private lateinit var btnPower: ImageButton
-    private lateinit var btnLock: ImageButton
     private lateinit var btnBuzzer: ImageButton
     private lateinit var btnPosition: ImageButton
     private lateinit var btnMode: ImageButton
-    private lateinit var btnHandlingMode: ImageButton
     private lateinit var btnEmergencyStop: ImageButton
     private lateinit var btnCountPallet: ImageButton
 
@@ -59,7 +58,6 @@ class ControlFragment : Fragment() {
     private lateinit var layoutManualLeft: LinearLayout
     private lateinit var layoutAutoRight: LinearLayout
     private lateinit var layoutManualRight: LinearLayout
-    private lateinit var textCountPallet: TextView
     private lateinit var btnPickPallets: ImageButton
     private lateinit var btnPickPallet: ImageButton
     private lateinit var btnStackA: ImageButton
@@ -102,6 +100,8 @@ class ControlFragment : Fragment() {
     private var pollingJob: Job? = null
     private var isConnected = false
 
+    private lateinit var shuttleFunctionHandler: ShuttleFunctionHandler
+
     private var isIndicatorInitialized = false
 
 
@@ -118,11 +118,9 @@ class ControlFragment : Fragment() {
     // Khai báo trạng thái các toggle button
     private val buttonStates = mapOf(
         ModbusCommand.POWER to ButtonState(ModbusCommand.POWER, activeResId = R.drawable.ic_power_on, inactiveResId = R.drawable.ic_power_off),
-        ModbusCommand.LOCK to ButtonState(ModbusCommand.LOCK, activeResId = R.drawable.ic_lock_closed, inactiveResId = R.drawable.ic_lock_open),
         ModbusCommand.BUZZER to ButtonState(ModbusCommand.BUZZER, activeResId = R.drawable.ic_buzzer_on, inactiveResId = R.drawable.ic_buzzer_off),
         ModbusCommand.DIRECTION to ButtonState(ModbusCommand.DIRECTION, activeResId = R.drawable.ic_direction_a, inactiveResId = R.drawable.ic_direction_b),
         ModbusCommand.MODE to ButtonState(ModbusCommand.MODE, activeResId = R.drawable.ic_mode_auto, inactiveResId = R.drawable.ic_mode_manual),
-        ModbusCommand.HANDLING to ButtonState(ModbusCommand.HANDLING, activeResId = R.drawable.ic_fifo, inactiveResId = R.drawable.ic_lifo),
         ModbusCommand.EMERGENCY_STOP to ButtonState(ModbusCommand.EMERGENCY_STOP, activeResId = R.drawable.ic_emergency_stop, inactiveResId = R.drawable.ic_emergency_stop),
         ModbusCommand.COUNT_PALLET to ButtonState(ModbusCommand.COUNT_PALLET, activeResId = R.drawable.ic_count_pallet, inactiveResId = R.drawable.ic_count_pallet),
         ModbusCommand.PICK_PALLETS to ButtonState(ModbusCommand.PICK_PALLETS, activeResId = R.drawable.ic_pallets_plus1, inactiveResId = R.drawable.ic_pallets_plus2),
@@ -152,11 +150,24 @@ class ControlFragment : Fragment() {
         // Khởi handler
         handler = ButtonStateHandler(viewLifecycleOwner.lifecycleScope)
 
-        // Khởi dynamic rules từ class riêng
-        handler.dynamicRules.addAll(LockRuleConfig.getRules())
 
         bindViews(view)
         setupUI()
+
+        // Initialize ShuttleFunctionHandler
+        shuttleFunctionHandler = ShuttleFunctionHandler(
+            fragment = this,
+            modbusManager = null,
+            canExecuteCommandCheck = ::canExecuteCommand
+        )
+
+        shuttleFunctionHandler.initialize(
+            spinnerFunctions,
+            etStartX, etStartY, etStartZ,
+            etEndX, etEndY, etEndZ,
+            tvActualX, tvActualY, tvActualZ,
+            btnRunFunction
+        )
 
         // Observe dữ liệu từ ViewModel
         modbusViewModel.modbusData.observe(viewLifecycleOwner, Observer { result ->
@@ -170,23 +181,6 @@ class ControlFragment : Fragment() {
             }
         })
 
-        // Thiết lập spinner
-        spinnerFunctions.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-                val isCoordinateMode = position == 0 || position == 1 // "Chạy không tải" hoặc "Di chuyển pallet"
-                etStartX.isEnabled = isCoordinateMode
-                etStartY.isEnabled = isCoordinateMode
-                etStartZ.isEnabled = isCoordinateMode
-                etEndX.isEnabled = isCoordinateMode
-                etEndY.isEnabled = isCoordinateMode
-                etEndZ.isEnabled = isCoordinateMode
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>) {
-                // Không làm gì
-            }
-        }
-
         connectionManager.connectionStatus.observe(viewLifecycleOwner, Observer { status ->
             when (status) {
                 ModbusConnectionManager.ConnectionStatus.Connected -> {
@@ -197,6 +191,8 @@ class ControlFragment : Fragment() {
                     isConnected = true
                     setupListeners()
                     setupBatteryMonitor()
+                    shuttleIndicator.startMonitoring()
+                    shuttleFunctionHandler.setModbusManager(modbusManager)
                 }
                 else -> {
                     modbusManager = null
@@ -211,7 +207,7 @@ class ControlFragment : Fragment() {
             device?.let { tvNameDevice.text = it.name }
         })
 
-        setupRunButton()
+//        setupRunButton()
     }
 
     private fun bindViews(root: View) {
@@ -219,11 +215,9 @@ class ControlFragment : Fragment() {
         tvStatus          = root.findViewById(R.id.tvStatus)
 
         btnPower          = root.findViewById(R.id.btnPower)
-        btnLock           = root.findViewById(R.id.btnLock)
         btnBuzzer         = root.findViewById(R.id.btnBuzzer)
         btnPosition       = root.findViewById(R.id.btnPosition)
         btnMode           = root.findViewById(R.id.btnMode)
-        btnHandlingMode   = root.findViewById(R.id.btnHandlingMode)
         btnEmergencyStop  = root.findViewById(R.id.btnEmergencyStop)
         btnCountPallet    = root.findViewById(R.id.btnCountPallet)
 
@@ -243,12 +237,11 @@ class ControlFragment : Fragment() {
         layoutManualLeft  = root.findViewById(R.id.layoutManualLeft)
         layoutAutoRight   = root.findViewById(R.id.layoutAutoRight)
         layoutManualRight = root.findViewById(R.id.layoutManualRight)
-        textCountPallet = root.findViewById(R.id.textCountPallet)
 
-        tvOperationStatus = root.findViewById(R.id.tvOperationStatus)
+        tvOperationStatus = requireActivity().findViewById(R.id.tvOperationStatus)
 
-        icBattery = root.findViewById(R.id.icBattery)
-        tvBattery = root.findViewById(R.id.tvBattery)
+        icBattery = requireActivity().findViewById(R.id.icBattery)
+        tvBattery = requireActivity().findViewById(R.id.tvBattery)
 
         spinnerFunctions = root.findViewById(R.id.spinnerFunctions)
         etStartX = root.findViewById(R.id.etStartX)
@@ -265,11 +258,9 @@ class ControlFragment : Fragment() {
         // Map commands → buttons
         listOf(
             btnPower to ModbusCommand.POWER,
-            btnLock  to ModbusCommand.LOCK,
             btnBuzzer to ModbusCommand.BUZZER,
             btnPosition to ModbusCommand.DIRECTION,
             btnMode to ModbusCommand.MODE,
-            btnHandlingMode to ModbusCommand.HANDLING,
             btnEmergencyStop to ModbusCommand.EMERGENCY_STOP,
             btnCountPallet to ModbusCommand.COUNT_PALLET,
             btnPickPallets to ModbusCommand.PICK_PALLETS,
@@ -353,34 +344,14 @@ class ControlFragment : Fragment() {
         )
 
         shuttleIndicator = ShuttlePositionIndicator(
-            icons,
-            onRes,
-            offRes,
-            root.findViewById(R.id.ivShuttle),
-            root.findViewById(R.id.vBelt)
+            modbusManager = connectionManager.getModbusManager()!!,
+            lifecycleOwner = viewLifecycleOwner,
+            icons = icons,
+            onRes = onRes,
+            offRes = offRes
         )
 
         isIndicatorInitialized = true
-    }
-
-    private fun setupCoordinatePolling() {
-        pollingJob = lifecycleScope.launch {
-            while (isActive) {
-                try {
-                    val actualX = modbusManager?.readRegister(ModbusCommand.ACTUAL_X.address)
-                    val actualY = modbusManager?.readRegister(ModbusCommand.ACTUAL_Y.address)
-                    val actualZ = modbusManager?.readRegister(ModbusCommand.ACTUAL_Z.address)
-                    withContext(Dispatchers.Main) {
-                        tvActualX.text = "Actual X: ${actualX ?: "N/A"}"
-                        tvActualY.text = "Actual Y: ${actualY ?: "N/A"}"
-                        tvActualZ.text = "Actual Z: ${actualZ ?: "N/A"}"
-                    }
-                } catch (e: Exception) {
-                    Log.e("ControlFragment", "Lỗi đọc tọa độ thực tế: ${e.message}")
-                }
-                delay(1000) // Cập nhật mỗi giây
-            }
-        }
     }
 
     private fun updateBatteryUI(batteryLevel: Int) {
@@ -485,11 +456,6 @@ class ControlFragment : Fragment() {
         // Cross-lock
         handler.applyCrossLocking(response, buttonLockStates)
         updateButtonEnableStates()
-        // Shuttle indicator
-        if (isIndicatorInitialized) {
-            val pos = response.getRegisterValue(ModbusCommand.LOCATION.address - 1).coerceIn(1, 13)
-            shuttleIndicator.update(pos)
-        }
         toggleUIMode()
     }
 
@@ -515,71 +481,12 @@ class ControlFragment : Fragment() {
 
     private fun toggleUIMode() {
         val auto = buttonStates[ModbusCommand.MODE]?.isActive ?: true
-        layoutAutoLeft.visibility   = if (auto) View.VISIBLE else View.GONE
-        layoutManualLeft.visibility = if (!auto) View.VISIBLE else View.GONE
-        layoutAutoRight.visibility  = if (auto) View.VISIBLE else View.GONE
-        layoutManualRight.visibility= if (!auto) View.VISIBLE else View.GONE
+        layoutAutoLeft.visibility   = if (auto) View.VISIBLE else View.INVISIBLE
+        layoutManualLeft.visibility = if (!auto) View.VISIBLE else View.INVISIBLE
+        layoutAutoRight.visibility  = if (auto) View.VISIBLE else View.INVISIBLE
+        layoutManualRight.visibility= if (!auto) View.VISIBLE else View.INVISIBLE
 
-        btnCountPallet.visibility = if(auto) View.VISIBLE else View.GONE
-        textCountPallet.visibility = if (auto) View.VISIBLE else View.GONE
-    }
-
-    private fun setupRunButton() {
-        btnRunFunction.setOnClickListener {
-            if (!canExecuteCommand()) {
-                showToast("Đang xử lý lệnh khác…")
-                return@setOnClickListener
-            }
-
-            val selectedPosition = spinnerFunctions.selectedItemPosition
-            if (selectedPosition == 0 || selectedPosition == 1) { // "Chạy không tải" hoặc "Di chuyển pallet"
-                if (!validateCoordinates()) {
-                    showToast("Vui lòng nhập đầy đủ và đúng định dạng cho các tọa độ.")
-                    return@setOnClickListener
-                }
-            }
-
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    when (selectedPosition) {
-                        0, 1 -> { // "Chạy không tải" hoặc "Di chuyển pallet"
-                            val startX = etStartX.text.toString().toInt()
-                            val startY = etStartY.text.toString().toInt()
-                            val startZ = etStartZ.text.toString().toInt()
-                            val endX = etEndX.text.toString().toInt()
-                            val endY = etEndY.text.toString().toInt()
-                            val endZ = etEndZ.text.toString().toInt()
-
-                            modbusManager?.writeCommand(ModbusCommand.START_X.address, startX)
-                            modbusManager?.writeCommand(ModbusCommand.START_Y.address, startY)
-                            modbusManager?.writeCommand(ModbusCommand.START_Z.address, startZ)
-                            modbusManager?.writeCommand(ModbusCommand.END_X.address, endX)
-                            modbusManager?.writeCommand(ModbusCommand.END_Y.address, endY)
-                            modbusManager?.writeCommand(ModbusCommand.END_Z.address, endZ)
-                        }
-                        2 -> { // "Sạc shuttle"
-                            // Không cần gửi tọa độ
-                        }
-                    }
-
-                    val functionNumber = when (selectedPosition) {
-                        0 -> 2 // "Chạy không tải"
-                        1 -> 3 // "Di chuyển pallet"
-                        2 -> 1 // "Sạc shuttle"
-                        else -> 0
-                    }
-                    modbusManager?.writeCommand(ModbusCommand.FUNCTION_MODE.address, functionNumber)
-
-                    withContext(Dispatchers.Main) {
-                        showToast("Đã gửi lệnh thành công")
-                    }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        showToast("Lỗi: ${e.message}")
-                    }
-                }
-            }
-        }
+        btnCountPallet.visibility = if(!auto) View.VISIBLE else View.INVISIBLE
     }
 
     private fun validateCoordinates(): Boolean {
@@ -645,6 +552,7 @@ class ControlFragment : Fragment() {
         super.onDestroyView()
         pollingJob?.cancel()
         isIndicatorInitialized = false
+        shuttleIndicator.stopMonitoring()
         // Do not disconnect here as we're using the shared connection manager
         // It will manage the connection lifecycle for the entire app
     }

@@ -12,135 +12,114 @@ object AppConfigStatus {
             null,
             Color.parseColor("#FF5722") // e.g., deep orange
         ),
-        // 2- LOCK
+        // 2- BUZZER
         2 to OperationStatus(
             2,
-            "🔒 LOCK",
-            null,
-            Color.parseColor("#4CAF50")
-        ),
-        // 3- BUZZER
-        3 to OperationStatus(
-            3,
             "🔔 BUZZER",
             null,
             Color.parseColor("#FFC107")
         ),
-        // 4- DIRECTION
-        4 to OperationStatus(
-            4,
+        // 3- DIRECTION
+        3 to OperationStatus(
+            3,
             "↔️ DIRECTION",
             null,
             Color.parseColor("#2196F3")
         ),
-        // 5- MODE
-        5 to OperationStatus(
-            5,
+        // 4- MODE
+        4 to OperationStatus(
+            4,
             "CHANGE MODE",
             null,
             Color.parseColor("#9C27B0")
         ),
-        // 6- HANDLING
-        6 to OperationStatus(
-            6,
-            "🤲 HANDLING",
-            null,
-            Color.parseColor("#795548")
-        ),
-        // 7- EMERGENCY STOP
-        7 to OperationStatus(
-            7,
+        // 5- EMERGENCY STOP
+        5 to OperationStatus(
+            5,
             "⛔ EMERGENCY STOP",
             null,
             Color.parseColor("#F44336")
         ),
-        // 8- COUNT PALLET
-        8 to OperationStatus(
-            8,
+        // 6- COUNT PALLET
+        6 to OperationStatus(
+            6,
             "📦 COUNT PALLET",
             null,
             Color.parseColor("#009688")
         ),
-        // 9- PICK PALLET
-        9 to OperationStatus(
-            9,
+        // 7- PICK PALLET
+        7 to OperationStatus(
+            7,
             "🤏 PICK PALLET",
             null,
             Color.parseColor("#3F51B5")
         ),
-        // 10- STACK A
-        10 to OperationStatus(
-            10,
+        // 8- STACK A
+        8 to OperationStatus(
+            8,
             "🅰️ STACK A",
             null,
             Color.parseColor("#607D8B")
         ),
-        // 11- TAKE PALLET
-        11 to OperationStatus(
-            11,
+        // 9- TAKE PALLET
+        9 to OperationStatus(
+            9,
             "↩️ TAKE PALLET",
             null,
             Color.parseColor("#00BCD4")
         ),
-        // 12- STACK B
-        12 to OperationStatus(
-            12,
+        // 10- STACK B
+        10 to OperationStatus(
+            10,
             "🅱️ STACK B",
             null,
             Color.parseColor("#607D8B")
         ),
-        // 13- FORWARD
-        13 to OperationStatus(
-            13,
+        // 11- FORWARD
+        11 to OperationStatus(
+            11,
             "⬆️ FORWARD",
             null,
             Color.parseColor("#8BC34A")
         ),
-        // 14- REVERSE
-        14 to OperationStatus(
-            14,
+        // 12- REVERSE
+        12 to OperationStatus(
+            12,
             "⬇️ REVERSE",
             null,
             Color.parseColor("#CDDC39")
         ),
-        // 15- UP
-        15 to OperationStatus(
-            15,
+        // 13- UP
+        13 to OperationStatus(
+            13,
             "🔼 UP",
             null,
             Color.parseColor("#009688")
         ),
-        // 16- DOWN
-        16 to OperationStatus(
-            16,
+        // 14- DOWN
+        14 to OperationStatus(
+            14,
             "🔽 DOWN",
             null,
             Color.parseColor("#009688")
         ),
-        // 17- PICK PALLETS
-        17 to OperationStatus(
-            17,
+        // 15- PICK PALLETS
+        15 to OperationStatus(
+            15,
             "🤏 PICK PALLETS",
             null,
             Color.parseColor("#3F51B5")
         ),
-        // 18- TAKE PALLETS
-        18 to OperationStatus(
+        // 16- TAKE PALLETS
+        16 to OperationStatus(
             18,
             "↩️ TAKE PALLETS",
             null,
             Color.parseColor("#00BCD4")
         ),
-        // 19- LOCATION
-        19 to OperationStatus(
-            19,
-            "📍 LOCATION",
-            null,
-            Color.parseColor("#3F51B5")
-        ),
-        // 20- OPERATION STATUS
-        20 to OperationStatus(
-            20,
+        // 18- OPERATION STATUS
+        18 to OperationStatus(
+            18,
             "ℹ️ OPERATION STATUS",
             null,
             Color.parseColor("#795548")

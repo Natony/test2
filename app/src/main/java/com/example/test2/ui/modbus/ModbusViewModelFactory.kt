@@ -1,8 +1,9 @@
 package com.example.test2.ui.modbus
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import android.content.Context
+import com.example.test2.ui.modbus.ModbusViewModel
 
 class ModbusViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

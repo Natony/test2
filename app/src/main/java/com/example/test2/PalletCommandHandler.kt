@@ -62,8 +62,8 @@ class PalletCommandHandler(
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val quantityAddress = when (command) {
-                    ModbusCommand.PICK_PALLETS -> 18 // Địa chỉ giả định
-                    ModbusCommand.TAKE_PALLETS -> 19 // Địa chỉ giả định
+                    ModbusCommand.PICK_PALLETS -> 16 // Địa chỉ giả định
+                    ModbusCommand.TAKE_PALLETS -> 17 // Địa chỉ giả định
                     else -> throw IllegalArgumentException("Command không hợp lệ")
                 }
                 // Gửi lệnh kích hoạt

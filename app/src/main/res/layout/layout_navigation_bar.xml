@@ -13,15 +13,40 @@
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:orientation="horizontal"
-        android:padding="2dp">
+        android:padding="1dp">
 
         <ImageView
-            android:layout_width="45dp"
-            android:layout_height="36dp"
+            android:layout_width="80dp"
+            android:layout_height="40dp"
             android:adjustViewBounds="true"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:scaleType="fitCenter"
-            android:src="@mipmap/logo" />
+            android:src="@drawable/logoavs" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:orientation="horizontal"
+        android:padding="2dp">
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+            <TextView
+                android:id="@+id/tvOperationStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Trạng thái hoạt động"
+                android:textColor="#000000"
+                android:textSize="20sp"
+                android:padding="2dp" />
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -83,7 +108,30 @@
             android:adjustViewBounds="true"
             android:padding="2dp"
             android:scaleType="fitCenter" />
-
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:padding="2dp">
+            <ImageView
+                android:id="@+id/icBattery"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_battery_full"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:adjustViewBounds="true"
+                android:padding="2dp"
+                android:scaleType="fitCenter" />
+            <TextView
+                android:id="@+id/tvBattery"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="2dp"
+                android:textSize="14sp"
+                android:text="99%"
+                android:textStyle="bold"
+                android:scaleType="fitCenter" />
+        </LinearLayout>
     </LinearLayout>
 
 </RelativeLayout>

@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.view.MotionEvent
 import android.widget.ImageButton
+import com.example.test2.rules.LockRuleConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -13,8 +14,13 @@ import net.wimpi.modbus.msg.ReadMultipleRegistersResponse
 
 /**
  * Handles both “momentary” (press-and-hold), “toggle” behaviors and dynamic cross-locking for ImageButton.
- *
- * @param scope CoroutineScope to launch IO/Main work (e.g. viewLifecycleOwner.lifecycleScope)
+ * Usage:
+ *   val handler = ButtonStateHandler(lifecycleScope)
+ *   // rules auto-loaded from LockRuleConfig
+ *   handler.setupToggleButton(...)
+ *   handler.setupMomentaryButton(...)
+ *   // apply locks in updateUI
+ *   handler.applyCrossLocking(response, buttonLockStates)
  */
 class ButtonStateHandler(private val scope: CoroutineScope) {
 
@@ -26,8 +32,8 @@ class ButtonStateHandler(private val scope: CoroutineScope) {
         val toUnlock: List<ModbusCommand> = emptyList()
     )
 
-    // Danh sách rule động; có thể bổ sung thêm từ bên ngoài
-    val dynamicRules: MutableList<LockRule> = mutableListOf()
+    // Danh sách rule động; tự động load từ LockRuleConfig
+    private val dynamicRules: List<LockRule> = LockRuleConfig.getRules()
 
     /**
      * Momentary button: ACTION_DOWN → send “1”, ACTION_UP/CANCEL → send “0”.
@@ -137,43 +143,24 @@ class ButtonStateHandler(private val scope: CoroutineScope) {
         }
     }
 
-    /**
-     * Áp dụng các rule khóa động (dynamicRules) dựa trên giá trị từ response
-     */
-    private fun applyDynamicLocking(
-        response: ReadMultipleRegistersResponse,
-        buttonLockStates: MutableMap<ModbusCommand, Boolean>
+    fun updateQuantityButton(
+        button: ImageButton,
+        quantity: Int,
+        activeResId: Int,
+        inactiveResId: Int
     ) {
-        val manualCmds = listOf(
-            ModbusCommand.FORWARD,
-            ModbusCommand.REVERSE,
-            ModbusCommand.UP,
-            ModbusCommand.DOWN
-        )
-        val manualActive = manualCmds.count {
-            response.getRegisterValue(it.address - 1) == 1
-        }
-
-        for (rule in dynamicRules) {
-            if (rule.trigger in manualCmds && manualActive > 1) continue
-
-            val curr = response.getRegisterValue(rule.trigger.address - 1)
-            if (curr == rule.lockWhenValue) {
-                rule.toLock.forEach   { buttonLockStates[it] = true  }
-                rule.toUnlock.forEach { buttonLockStates[it] = false }
-            }
-        }
+        button.setImageResource(if (quantity > 0) activeResId else inactiveResId)
     }
 
     /**
-     * Hàm tổng hợp để gọi từ ControlFragment.updateUI():
-     * 1) ưu tiên Emergency → khóa hết trừ EMERGENCY_STOP
-     * 2) áp động các rule
+     * Áp dụng các rule khóa động (dynamicRules) dựa trên giá trị từ response
+     * Gọi hàm này trong ControlFragment.updateUI
      */
     fun applyCrossLocking(
         response: ReadMultipleRegistersResponse,
         buttonLockStates: MutableMap<ModbusCommand, Boolean>
     ) {
+        // 1) Emergency stop overrides tất cả
         val emVal = response.getRegisterValue(ModbusCommand.EMERGENCY_STOP.address - 1)
         if (emVal == 1) {
             buttonLockStates.keys.forEach { cmd ->
@@ -182,7 +169,31 @@ class ButtonStateHandler(private val scope: CoroutineScope) {
             return
         }
 
+        // Reset all unlock
         buttonLockStates.keys.forEach { buttonLockStates[it] = false }
-        applyDynamicLocking(response, buttonLockStates)
+
+        // Áp dụng từng rule
+        val manualGroup = listOf(
+            ModbusCommand.FORWARD,
+            ModbusCommand.REVERSE,
+            ModbusCommand.UP,
+            ModbusCommand.DOWN
+        )
+        val manualActiveCount = manualGroup.count {
+            response.getRegisterValue(it.address - 1) == 1
+        }
+
+        for (rule in dynamicRules) {
+            // Với manual nhóm: chỉ lock nếu <=1 is active
+            if (rule.trigger in manualGroup && manualActiveCount > 1) continue
+
+            val curr = response.getRegisterValue(rule.trigger.address - 1)
+            val shouldLock = if (rule.lockWhenValue < 0) curr != 0 else curr == rule.lockWhenValue
+
+            if (shouldLock) {
+                rule.toLock.forEach   { buttonLockStates[it] = true  }
+                rule.toUnlock.forEach { buttonLockStates[it] = false }
+            }
+        }
     }
 }

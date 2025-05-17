@@ -1,42 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/layout_run_point"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_weight="0.5"
-    android:gravity="center"
-    android:orientation="horizontal"
+    android:layout_height="match_parent"
+    android:layout_gravity="center"
     android:padding="2dp">
 
-    <!-- Container for point definitions -->
-    <LinearLayout
-        android:id="@+id/layout_points"
-        android:layout_width="match_parent"
+    <!-- Horizontal chain of cards and controls -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_start_point"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="horizontal"
-        android:padding="1dp">
+        android:layout_margin="2dp"
+        app:cardCornerRadius="2dp"
+        app:cardElevation="4dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/card_end_point"
+        app:layout_constraintHorizontal_chainStyle="spread"
+        app:layout_constraintWidth_percent="0.18">
 
-        <!-- Start Point (editable) -->
+        <!-- Nội dung Start Point -->
         <LinearLayout
-            android:id="@+id/layout_start_point"
-            android:layout_width="0dp"
-            android:layout_weight="1"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="1dp">
+            android:padding="2dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center"
                 android:text="Điểm bắt đầu"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:paddingTop="1dp">
+                android:layout_marginTop="4dp">
 
                 <EditText
                     android:id="@+id/etStartX"
@@ -44,7 +47,8 @@
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:hint="X"
-                    android:inputType="number" />
+                    android:inputType="number"
+                    android:padding="4dp" />
 
                 <EditText
                     android:id="@+id/etStartY"
@@ -53,7 +57,8 @@
                     android:layout_height="wrap_content"
                     android:hint="Y"
                     android:inputType="number"
-                    android:layout_marginStart="2dp" />
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
 
                 <EditText
                     android:id="@+id/etStartZ"
@@ -62,31 +67,44 @@
                     android:layout_height="wrap_content"
                     android:hint="Z"
                     android:inputType="number"
-                    android:layout_marginStart="2dp" />
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
 
             </LinearLayout>
         </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
-        <!-- End Point (editable) -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_end_point"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="4dp"
+        app:cardCornerRadius="2dp"
+        app:cardElevation="4dp"
+        app:layout_constraintStart_toEndOf="@id/card_start_point"
+        app:layout_constraintEnd_toStartOf="@+id/card_actual_point"
+        app:layout_constraintWidth_percent="0.18">
+
+        <!-- Nội dung End Point -->
         <LinearLayout
-            android:id="@+id/layout_end_point"
-            android:layout_width="0dp"
-            android:layout_weight="1"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="1dp">
+            android:padding="2dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Điểm kết thúc"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:layout_gravity="center"
+                android:textSize="12sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:paddingTop="1dp">
+                android:layout_marginTop="4dp">
 
                 <EditText
                     android:id="@+id/etEndX"
@@ -94,7 +112,8 @@
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:hint="X"
-                    android:inputType="number" />
+                    android:inputType="number"
+                    android:padding="4dp" />
 
                 <EditText
                     android:id="@+id/etEndY"
@@ -103,7 +122,8 @@
                     android:layout_height="wrap_content"
                     android:hint="Y"
                     android:inputType="number"
-                    android:layout_marginStart="2dp" />
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
 
                 <EditText
                     android:id="@+id/etEndZ"
@@ -112,87 +132,92 @@
                     android:layout_height="wrap_content"
                     android:hint="Z"
                     android:inputType="number"
-                    android:layout_marginStart="2dp" />
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
 
             </LinearLayout>
         </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
-        <!-- Actual Point (view only) -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_actual_point"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="4dp"
+        app:cardCornerRadius="2dp"
+        app:cardElevation="4dp"
+        app:layout_constraintStart_toEndOf="@id/card_end_point"
+        app:layout_constraintEnd_toStartOf="@+id/spinnerFunctions"
+        app:layout_constraintWidth_percent="0.18">
+
+        <!-- Nội dung Actual Point -->
         <LinearLayout
-            android:id="@+id/layout_actual_point"
-            android:layout_width="0dp"
-            android:layout_weight="1"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="1dp">
+            android:padding="2dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Thực tế"
-                android:textStyle="bold" />
+                android:layout_gravity="center"
+                android:textStyle="bold"
+                android:textSize="12sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:paddingTop="1dp">
+                android:layout_marginTop="4dp">
 
                 <TextView
                     android:id="@+id/tvActualX"
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:hint="X" />
+                    android:padding="4dp" />
 
                 <TextView
                     android:id="@+id/tvActualY"
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:hint="Y"
-                    android:layout_marginStart="2dp" />
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
 
                 <TextView
                     android:id="@+id/tvActualZ"
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:hint="Z"
-                    android:layout_marginStart="2dp" />
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
 
             </LinearLayout>
         </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
-    </LinearLayout>
-
-    <!-- Container for action controls -->
-    <LinearLayout
-        android:id="@+id/layout_actions"
-        android:layout_width="match_parent"
+    <Spinner
+        android:id="@+id/spinnerFunctions"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="1dp"
-        android:layout_marginTop="1dp">
+        android:entries="@array/function_list"
+        android:layout_margin="4dp"
+        app:layout_constraintStart_toEndOf="@id/card_actual_point"
+        app:layout_constraintEnd_toStartOf="@+id/btnRunFunction"
+        app:layout_constraintWidth_percent="0.18"
+        app:layout_constraintTop_toTopOf="@id/card_start_point" />
 
-        <!-- Spinner for function selection -->
-        <Spinner
-            android:id="@+id/spinnerFunctions"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:entries="@array/function_list" />
+    <Button
+        android:id="@+id/btnRunFunction"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Chạy"
+        android:layout_margin="4dp"
+        app:layout_constraintStart_toEndOf="@id/spinnerFunctions"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_percent="0.18"
+        app:layout_constraintTop_toTopOf="@id/card_start_point" />
 
-        <!-- Run button -->
-        <Button
-            android:id="@+id/btnRunFunction"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Chạy"
-            android:layout_marginStart="16dp" />
-
-    </LinearLayout>
-
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

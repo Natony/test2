@@ -5,84 +5,97 @@ import com.example.test2.ModbusCommand
 
 /**
  * Cấu hình các rule khóa động cho ButtonStateHandler.
- * Nhóm các rule theo chức năng để dễ quản lý khi có nhiều quy tắc.
+ * Dễ dàng mở rộng và quản lý tập trung.
  */
 object LockRuleConfig {
     private val rules = mutableListOf<LockRule>()
 
     init {
-        addHandlingRules()
-        addManualRules()
-        addAutoRules()
-        addMainRules()
-        // TODO: addOtherRules() khi có thêm yêu cầu khóa khác
-    }
-
-    private fun addHandlingRules() {
-        // Khi HANDLING = 1: khóa STACK_B, mở STACK_A
-        rules += LockRule(
-            trigger = ModbusCommand.HANDLING,
-            lockWhenValue = 1,
-            toLock = listOf(ModbusCommand.STACK_B),
-            toUnlock = listOf(ModbusCommand.STACK_A)
-        )
-        // Khi HANDLING = 0: khóa STACK_A, mở STACK_B
-        rules += LockRule(
-            trigger = ModbusCommand.HANDLING,
-            lockWhenValue = 0,
-            toLock = listOf(ModbusCommand.STACK_A),
-            toUnlock = listOf(ModbusCommand.STACK_B)
-        )
-    }
-
-    private fun addManualRules() {
-        // Định nghĩa nhóm các nút manual để tạo rule mutual-exclusive
-        val manualGroup = listOf(
+        // Manual: mutual-exclusive khi giá trị == 1
+        addExclusiveGroup(listOf(
             ModbusCommand.FORWARD,
             ModbusCommand.REVERSE,
             ModbusCommand.UP,
             ModbusCommand.DOWN
-        )
-        addExclusiveGroup(manualGroup)
-    }
+        ))
 
-    private fun addAutoRules() {
-        // Định nghĩa nhóm các nút manual để tạo rule mutual-exclusive
-        val autoGroup = listOf(
-            ModbusCommand.PICK_PALLETS,
-            ModbusCommand.TAKE_PALLETS,
+        // Auto basics: mutual-exclusive khi giá trị == 1
+        addExclusiveGroup(listOf(
             ModbusCommand.PICK_PALLET,
             ModbusCommand.TAKE_PALLET,
             ModbusCommand.STACK_A,
             ModbusCommand.STACK_B
-        )
-        addExclusiveGroup(autoGroup)
-    }
+        ))
 
-    private fun addMainRules(){
-        val mainGroup = listOf(
-            ModbusCommand.LOCK,
+        // Main: mutual-exclusive khi giá trị == 1
+        addExclusiveGroup(listOf(
             ModbusCommand.BUZZER,
             ModbusCommand.COUNT_PALLET
+        ))
+
+        // Pallet quantity: lock TAKE_PALLETS khi PICK_PALLETS > 0 (lockWhenValue < 0 => != 0)
+        addQuantityRule(
+            trigger = ModbusCommand.PICK_PALLETS,
+            toLock = listOf(
+                ModbusCommand.TAKE_PALLETS,
+                ModbusCommand.TAKE_PALLET,
+                ModbusCommand.PICK_PALLET,
+                ModbusCommand.STACK_A,
+                ModbusCommand.STACK_B,
+                ModbusCommand.FORWARD,
+                ModbusCommand.REVERSE,
+                ModbusCommand.UP,
+                ModbusCommand.DOWN
+            )
         )
-        addExclusiveGroup(mainGroup)
+        // Ngược lại: lock PICK_PALLETS khi TAKE_PALLETS > 0
+        addQuantityRule(
+            trigger = ModbusCommand.TAKE_PALLETS,
+            toLock = listOf(
+                ModbusCommand.PICK_PALLETS,
+                ModbusCommand.TAKE_PALLET,
+                ModbusCommand.PICK_PALLET,
+                ModbusCommand.STACK_A,
+                ModbusCommand.STACK_B,
+                ModbusCommand.FORWARD,
+                ModbusCommand.REVERSE,
+                ModbusCommand.UP,
+                ModbusCommand.DOWN
+            )
+        )
     }
+
     /**
-     * Tạo rule khóa chéo cho một nhóm commands, chỉ cho phép 1 active mỗi lúc
+     * Tạo rule khóa chéo cho một nhóm commands khi giá trị == 1
      */
     private fun addExclusiveGroup(group: List<ModbusCommand>) {
-        group.forEach { btn ->
+        group.forEach { trigger ->
             rules += LockRule(
-                trigger = btn,
+                trigger = trigger,
                 lockWhenValue = 1,
-                toLock = group.filter { it != btn },
-                toUnlock = emptyList()
+                toLock = group.filter { it != trigger }
             )
         }
     }
 
     /**
-     * Lấy toàn bộ rule dưới dạng bất biến
+     * Tạo rule dựa trên quantity: lockWhenValue = -1 để handler hiểu là value != 0
+     */
+    private fun addQuantityRule(
+        trigger: ModbusCommand,
+        toLock: List<ModbusCommand>,
+        toUnlock: List<ModbusCommand> = emptyList()
+    ) {
+        rules += LockRule(
+            trigger = trigger,
+            lockWhenValue = -1,
+            toLock = toLock,
+            toUnlock = toUnlock
+        )
+    }
+
+    /**
+     * Trả về danh sách rule bất biến
      */
     fun getRules(): List<LockRule> = rules.toList()
 }
