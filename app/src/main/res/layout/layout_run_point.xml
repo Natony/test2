@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="center"
+    android:padding="2dp">
+
+    <!-- Horizontal chain of cards and controls -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_start_point"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="2dp"
+        app:cardCornerRadius="2dp"
+        app:cardElevation="4dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/card_end_point"
+        app:layout_constraintHorizontal_chainStyle="spread"
+        app:layout_constraintWidth_percent="0.18">
+
+        <!-- Nội dung Start Point -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Điểm bắt đầu"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <EditText
+                    android:id="@+id/etStartX"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:hint="X"
+                    android:inputType="number"
+                    android:padding="4dp" />
+
+                <EditText
+                    android:id="@+id/etStartY"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:hint="Y"
+                    android:inputType="number"
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
+
+                <EditText
+                    android:id="@+id/etStartZ"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:hint="Z"
+                    android:inputType="number"
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
+
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_end_point"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="4dp"
+        app:cardCornerRadius="2dp"
+        app:cardElevation="4dp"
+        app:layout_constraintStart_toEndOf="@id/card_start_point"
+        app:layout_constraintEnd_toStartOf="@+id/card_actual_point"
+        app:layout_constraintWidth_percent="0.18">
+
+        <!-- Nội dung End Point -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Điểm kết thúc"
+                android:textStyle="bold"
+                android:layout_gravity="center"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <EditText
+                    android:id="@+id/etEndX"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:hint="X"
+                    android:inputType="number"
+                    android:padding="4dp" />
+
+                <EditText
+                    android:id="@+id/etEndY"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:hint="Y"
+                    android:inputType="number"
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
+
+                <EditText
+                    android:id="@+id/etEndZ"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:hint="Z"
+                    android:inputType="number"
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
+
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_actual_point"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="4dp"
+        app:cardCornerRadius="2dp"
+        app:cardElevation="4dp"
+        app:layout_constraintStart_toEndOf="@id/card_end_point"
+        app:layout_constraintEnd_toStartOf="@+id/spinnerFunctions"
+        app:layout_constraintWidth_percent="0.18">
+
+        <!-- Nội dung Actual Point -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thực tế"
+                android:layout_gravity="center"
+                android:textStyle="bold"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:id="@+id/tvActualX"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:padding="4dp" />
+
+                <TextView
+                    android:id="@+id/tvActualY"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
+
+                <TextView
+                    android:id="@+id/tvActualZ"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:padding="4dp" />
+
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <Spinner
+        android:id="@+id/spinnerFunctions"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:entries="@array/function_list"
+        android:layout_margin="4dp"
+        app:layout_constraintStart_toEndOf="@id/card_actual_point"
+        app:layout_constraintEnd_toStartOf="@+id/btnRunFunction"
+        app:layout_constraintWidth_percent="0.18"
+        app:layout_constraintTop_toTopOf="@id/card_start_point" />
+
+    <Button
+        android:id="@+id/btnRunFunction"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Chạy"
+        android:layout_margin="4dp"
+        app:layout_constraintStart_toEndOf="@id/spinnerFunctions"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_percent="0.18"
+        app:layout_constraintTop_toTopOf="@id/card_start_point" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

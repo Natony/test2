@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:padding="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+        <!-- LÈ PANEL -->
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/border">
+
+            <include
+                android:id="@+id/layoutAutoLeft"
+                layout="@layout/layout_auto_left" />
+
+            <include
+                android:id="@+id/layoutManualLeft"
+                layout="@layout/layout_manual_left" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="0.5"
+            android:background="@drawable/border">
+            <include
+                android:id="@+id/layoutCenterControl"
+                layout="@layout/layout_center" />
+
+            </LinearLayout>
+
+            <!-- RIGHT PANEL -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/border">
+                <include layout="@layout/layout_auto_right"
+                    android:id="@+id/layoutAutoRight"/>
+                <include layout="@layout/layout_manual_right"
+                    android:id="@+id/layoutManualRight"/>
+            </FrameLayout>
+        </LinearLayout>
+
+</LinearLayout>

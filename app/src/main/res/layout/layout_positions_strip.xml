@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center"
+    android:paddingTop="1dp">
+
+    <!--    <View-->
+    <!--        android:id="@+id/vBelt"-->
+    <!--        android:layout_width="wrap_content"-->
+    <!--        android:layout_height="match_parent"-->
+    <!--        android:background="@drawable/belt_shape" />-->
+
+    <!--    <ImageView-->
+    <!--        android:id="@+id/pos"-->
+    <!--        android:layout_width="0dp"-->
+    <!--        android:layout_height="wrap_content" -->
+    <!--        android:layout_marginTop="1dp"-->
+    <!--        android:gravity="center"-->
+    <!--        android:src="@drawable/ic_pos1_off" />-->
+
+    <ImageView android:id="@+id/pos1"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos1_off"/>
+    <ImageView android:id="@+id/pos2"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos2_off"/>
+    <ImageView android:id="@+id/pos3"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos3_off"/>
+    <ImageView android:id="@+id/pos4"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos4_off"/>
+    <ImageView android:id="@+id/pos5"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos5_off"/>
+    <ImageView android:id="@+id/pos6"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos6_off"/>
+    <ImageView android:id="@+id/pos7"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos7_off"/>
+    <ImageView android:id="@+id/pos8"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos8_off"/>
+    <ImageView android:id="@+id/pos9"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos9_off"/>
+    <ImageView android:id="@+id/pos10" android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos10_off"/>
+    <ImageView android:id="@+id/pos11" android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos11_off"/>
+    <ImageView android:id="@+id/pos12" android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos12_off"/>
+    <ImageView android:id="@+id/pos13" android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_pos13_off"/>
+</LinearLayout>

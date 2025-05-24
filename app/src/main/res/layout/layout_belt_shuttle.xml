@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/llBeltShuttle"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center"
+    android:paddingTop="1dp">
+
+    <!--    <View-->
+    <!--        android:id="@+id/vBelt"-->
+    <!--        android:layout_width="wrap_content"-->
+    <!--        android:layout_height="match_parent"-->
+    <!--        android:background="@drawable/belt_shape" />-->
+
+    <!--    <ImageView-->
+    <!--        android:id="@+id/ivShuttle"-->
+    <!--        android:layout_width="0dp"-->
+    <!--        android:layout_height="wrap_content" -->
+    <!--        android:layout_marginTop="1dp"-->
+    <!--        android:gravity="center"-->
+    <!--        android:src="@drawable/ic_shuttle" />-->
+
+    <ImageView android:id="@+id/ivShuttle1"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle2"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle3"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle4"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle5"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle6"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle7"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle8"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle9"  android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle10" android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle11" android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle12" android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+    <ImageView android:id="@+id/ivShuttle13" android:layout_width="0dp" android:layout_height="wrap_content"  android:layout_weight="1" android:padding="1dp" android:src="@drawable/ic_shuttle"/>
+</LinearLayout>
